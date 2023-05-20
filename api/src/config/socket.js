@@ -38,6 +38,7 @@ io.on("connection", async (socket) => {
         sender: message.user,
         content: message.msg,
         timestamp: Date.now(),
+        chatId: message.chatId,
       });
 
       // Guardar el mensaje en la base de datos
@@ -45,6 +46,9 @@ io.on("connection", async (socket) => {
 
       // Agregar el mensaje al chat
       chat.messages.push(newMessage);
+
+      chat.lastMessage = newMessage._id;
+     
       await chat.save();
 
       //obtenemos la info del usuario
@@ -56,7 +60,13 @@ io.on("connection", async (socket) => {
       newMessage.sender = sender;
 
       const newMessageJSON = newMessage.toJSON();
-      console.log("estamos en una sala y recibimos un mensaje", newMessageJSON);
+
+      const toFront = {
+        newMessage: newMessageJSON,
+        chatId: message.chatId,
+        lastMessage: chat.lastMessage
+      };
+
       io.to(message.chatId).emit("newMessage", newMessageJSON);
     } catch (error) {
       console.log("Error al guardar el mensaje:", error.message);

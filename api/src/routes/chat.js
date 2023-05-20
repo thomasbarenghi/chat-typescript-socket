@@ -92,6 +92,15 @@ router.get("/:id", async (req, res) => {
           model: "User",
           select: "firstName lastName _id image email",
         },
+      })
+      .populate({
+        path: "lastMessage",
+        model: "Message",
+        populate: {
+          path: "sender",
+          model: "User",
+          select: "_id",
+        },
       });
 
     res.json(chat);

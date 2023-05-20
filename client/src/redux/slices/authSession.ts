@@ -37,6 +37,68 @@ const initialState = {
   },
 };
 
+//tipo para chat:
+// {
+//   "_id": "6465d7eedb6efe0dc933b1d4",
+//   "participants": [
+//     {
+//       "_id": "6465afd4b6152b1152872ac0",
+//       "firstName": "Thomas",
+//       "lastName": "Barenghi",
+//       "email": "spacestudio.ar@gmail.com",
+//       "image": "https://lh3.googleusercontent.com/a/AGNmyxYvABrepY_VHH5ZCo9n_C0H57h7expOWS04qcay=s96-c"
+//     },
+//     {
+//       "_id": "6465b3ca55346bd2e59f3495",
+//       "firstName": "Thomas",
+//       "lastName": "Barenghi",
+//       "email": "thomasbarenghi@gmail.com",
+//       "image": "https://lh3.googleusercontent.com/a/AGNmyxaQOu2gjj2fFQui6UAEsh69ViNYxcdRC9bYUMwUZw=s96-c"
+//     }
+//   ],
+//   "messages": [
+//     {
+//       "sender": "6465afd4b6152b1152872ac0",
+//       "content": "cxcxc",
+//       "date": "2023-05-18T07:48:27.624Z",
+//       "_id": "6465d84bdb6efe0dc933b1dd",
+//       "__v": 0
+//     },
+//     {
+//       "sender": "6465afd4b6152b1152872ac0",
+//       "content": "testeamos",
+//       "date": "2023-05-18T07:48:55.828Z",
+//       "_id": "6465d867db6efe0dc933b1e3",
+//       "__v": 0
+//     },
+//   ],
+//   "__v": 32
+// }
+
+type Participant = {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  image: string;
+};
+
+type Message = {
+  sender: string;
+  content: string;
+  date: string;
+  _id: string;
+  __v: number;
+};
+
+type Chat = {
+  _id: string;
+  participants: Participant[];
+  messages: Message[];
+  lastMessage: Message;
+  __v: number;
+};
+
 //Actions
 export const getUserData = createAsyncThunk(
   "auth/getUserData",
@@ -52,6 +114,7 @@ export const getUserData = createAsyncThunk(
       };
 
       const chats = response.chats;
+      console.log(chats);
       await dispatch(setChats(chats));
 
       const session = createUserSession(response);

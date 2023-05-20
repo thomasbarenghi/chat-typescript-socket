@@ -76,6 +76,7 @@
 
 const mongoose = require("mongoose");
 
+
 const MessageSchema = new mongoose.Schema({
   sender: {
     type: mongoose.Schema.Types.ObjectId,
@@ -90,7 +91,11 @@ const MessageSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  // Otros campos relacionados con el mensaje si los hay
+  chatId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Chat",
+    required: true,
+  },
 });
 
 const ChatSchema = new mongoose.Schema({
@@ -102,10 +107,18 @@ const ChatSchema = new mongoose.Schema({
     },
   ],
   messages: [MessageSchema],
+  lastMessage: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Message",
+  },
 });
+
 
 const Chat = mongoose.model("Chat", ChatSchema);
 const Message = mongoose.model("Message", MessageSchema);
+
+// En el modelo MessageSchema
+
 
 module.exports = {
   Chat,

@@ -91,28 +91,19 @@ const chatFormater = ({ chats, user }: Props) => {
       updatedChat.participants = null;
     }
 
-    //dejamos solo el ultimo mensaje, considerando que messages es un array de objetos
     const messages = chat.messages;
     const lastMessage = messages[messages.length - 1] ?? { content: "" };
     updatedChat.messages = lastMessage;
-
-    //de messages.date obtenemos la hora
 
     const date = new Date(lastMessage.date);
     const hours = date.getHours();
     const minutes = date.getMinutes();
 
-    // if (hours !== NaN && minutes !== NaN) {
-    //   const time = hours + ":" + minutes;
-    // } else {
-    //   const time = "00:00";
-    // }
+    const time =
+      !Number.isNaN(hours) && !Number.isNaN(minutes)
+        ? hours + ":" + minutes
+        : "";
 
-const time = !Number.isNaN(hours) && !Number.isNaN(minutes) ? hours + ":" + minutes : "";
-
-
-    console.log("time", hours, minutes, time);
-    //creamos una propiedad hora
     const updatedChat2 = {
       ...updatedChat,
       messages: updatedChat.messages,

@@ -1,17 +1,15 @@
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
-import { createUserSession } from "@/utils/userSession";
-const urlServer = process.env.NEXT_PUBLIC_SERVER_URL;
 import { RootState } from "@/redux/store/store";
-import { types } from "util";
 import { toast } from "sonner";
 import { toastError, toastWarning, toastSuccess } from "@/utils/toastStyles";
-import { type } from "os";
+const urlServer = process.env.NEXT_PUBLIC_SERVER_URL;
 
 const initialState = {
   chats: [],
   currentChat: {
     messages: [],
+    lastMessage: {},
     id: "" as string | null,
   },
 };
@@ -22,15 +20,9 @@ export const getCurrentChat = createAsyncThunk(
   async (chatId: string, { rejectWithValue, getState }) => {
     try {
       const res = await axios.get(`${urlServer}api/chat/${chatId}`);
-
-      //hacemos un map y si el id de messages[].sender._id es igual al id de user._id, entonces le agregamos una propiedad de sender: true
-
       const state = getState() as RootState;
       const user = state.authSession.session.current;
-
       const messages = messageFormater({ messages: res.data.messages, user });
-
-      console.log("messages", messages);
       return { messages: messages, id: chatId };
     } catch (error: any) {
       return rejectWithValue(error.response.data);
@@ -44,11 +36,9 @@ export const newChat = createAsyncThunk(
     try {
       const state = getState() as RootState;
       const user = state.authSession.session.current;
-
       if (id === user._id) {
         return rejectWithValue("No puedes enviarte mensajes a ti mismo");
       }
-
       const chat = state.chats.chats.some((chat: any) => {
         return chat.participants.some((participant: any) => {
           return participant._id === id;
@@ -63,8 +53,6 @@ export const newChat = createAsyncThunk(
         _id: user._id,
         otherUserID: id,
       });
-
-      console.log("res", res.data);
 
       dispatch(getChats());
 
@@ -81,11 +69,7 @@ export const getChats = createAsyncThunk(
     try {
       const state = getState() as RootState;
       const user = state.authSession.session.current;
-
       const res = await axios.get(`${urlServer}api/user/${user._id}/chats`);
-
-      console.log("res get chats", res.data);
-
       return res.data;
     } catch (error: any) {
       return rejectWithValue(error);
@@ -99,7 +83,6 @@ const postsSlice = createSlice({
   initialState,
   reducers: {
     setChats(state, action: PayloadAction<any>) {
-      console.log("action.payload chats", action.payload);
       state.chats = action.payload;
     },
     setCurrentChat(state, action: PayloadAction<any>) {
