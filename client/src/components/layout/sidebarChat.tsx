@@ -10,7 +10,7 @@ const SidebarChat = () => {
   const chats = useAppSelector((state) => state.chats.chats);
   const user = useAppSelector((state) => state.authSession.session.current);
   const chatsFiltered = chatFormater({ chats, user });
-
+  console.log("chatsFiltered", chats);
   const setSala = (e: any) => {
     const socket = getSocket();
     console.log("e.chatId", e.chatId);
@@ -22,7 +22,7 @@ const SidebarChat = () => {
 
   return (
     <>
-      <div className="flex h-full max-h-full w-full  flex-col  px-8  overflow-y-scroll">
+      <div className="flex h-full max-h-full w-full  flex-col  overflow-y-scroll  px-8">
         <div className="mb-4 flex items-center justify-start gap-2 rounded-full bg-violet-200 px-6 py-3">
           <Image
             src="/icon/search.svg"
@@ -93,7 +93,7 @@ const chatFormater = ({ chats, user }: Props) => {
 
     //dejamos solo el ultimo mensaje, considerando que messages es un array de objetos
     const messages = chat.messages;
-    const lastMessage = messages[messages.length - 1];
+    const lastMessage = messages[messages.length - 1] ?? { content: "" };
     updatedChat.messages = lastMessage;
 
     //de messages.date obtenemos la hora
@@ -101,7 +101,15 @@ const chatFormater = ({ chats, user }: Props) => {
     const date = new Date(lastMessage.date);
     const hours = date.getHours();
     const minutes = date.getMinutes();
-    const time = hours + ":" + minutes;
+
+    // if (hours !== NaN && minutes !== NaN) {
+    //   const time = hours + ":" + minutes;
+    // } else {
+    //   const time = "00:00";
+    // }
+
+const time = !Number.isNaN(hours) && !Number.isNaN(minutes) ? hours + ":" + minutes : "";
+
 
     console.log("time", hours, minutes, time);
     //creamos una propiedad hora

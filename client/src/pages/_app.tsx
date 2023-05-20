@@ -13,16 +13,10 @@ import { PersistGate } from "redux-persist/integration/react";
 import { HOC } from "@/components";
 import { useEffect } from "react";
 import { getSocket, initSocket } from "../utils/socket";
-
+import { Toaster } from "sonner";
 
 const App: NextPage<AppProps> = ({ Component, pageProps }) => {
-
-
-
   useEffect(() => {
-
-   
-
     const connectSocket = async () => {
       try {
         await initSocket();
@@ -38,7 +32,13 @@ const App: NextPage<AppProps> = ({ Component, pageProps }) => {
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
           <HOC>
-          <Component {...pageProps} />
+            <Toaster
+              position="bottom-left"
+              toastOptions={{
+                className: "max-w-[85vw] xs:max-w-none ",
+              }}
+            />
+            <Component {...pageProps} />
           </HOC>
         </PersistGate>
       </Provider>

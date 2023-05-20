@@ -4,6 +4,9 @@ import { createUserSession } from "@/utils/userSession";
 const urlServer = process.env.NEXT_PUBLIC_SERVER_URL;
 import { RootState } from "@/redux/store/store";
 import { types } from "util";
+import { toast } from "sonner";
+import { toastError, toastWarning, toastSuccess } from "@/utils/toastStyles";
+import { type } from "os";
 
 const initialState = {
   chats: [],
@@ -35,6 +38,61 @@ export const getCurrentChat = createAsyncThunk(
   }
 );
 
+export const newChat = createAsyncThunk(
+  "chats/newChat",
+  async (id: string, { rejectWithValue, getState, dispatch }) => {
+    try {
+      const state = getState() as RootState;
+      const user = state.authSession.session.current;
+
+      if (id === user._id) {
+        return rejectWithValue("No puedes enviarte mensajes a ti mismo");
+      }
+
+      const chat = state.chats.chats.some((chat: any) => {
+        return chat.participants.some((participant: any) => {
+          return participant._id === id;
+        });
+      });
+
+      if (chat) {
+        return rejectWithValue("Ya existe un chat con este usuario");
+      }
+
+      const res = await axios.post(`${urlServer}api/chat/`, {
+        _id: user._id,
+        otherUserID: id,
+      });
+
+      console.log("res", res.data);
+
+      dispatch(getChats());
+
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue(error);
+    }
+  }
+);
+
+export const getChats = createAsyncThunk(
+  "chats/getChats",
+  async (_, { rejectWithValue, getState }) => {
+    try {
+      const state = getState() as RootState;
+      const user = state.authSession.session.current;
+
+      const res = await axios.get(`${urlServer}api/user/${user._id}/chats`);
+
+      console.log("res get chats", res.data);
+
+      return res.data;
+    } catch (error: any) {
+      return rejectWithValue(error);
+    }
+  }
+);
+
 //Reducers
 const postsSlice = createSlice({
   name: "chats",
@@ -45,9 +103,11 @@ const postsSlice = createSlice({
       state.chats = action.payload;
     },
     setCurrentChat(state, action: PayloadAction<any>) {
-
       const messages = [...state.currentChat.messages, action.payload.message];
-      const message = messageFormater({ messages: messages, user: action.payload.user });
+      const message = messageFormater({
+        messages: messages,
+        user: action.payload.user,
+      });
 
       state.currentChat.messages = message;
     },
@@ -63,6 +123,24 @@ const postsSlice = createSlice({
       })
       .addCase(getCurrentChat.rejected, (state, action) => {
         console.log("getCurrentChat error");
+      })
+
+      .addCase(newChat.fulfilled, (state, action) => {
+        toast.success("Chat creado", toastSuccess);
+      })
+      .addCase(newChat.rejected, (state, action: any) => {
+        console.log("newChat error", action.payload);
+
+        if (typeof action.payload === "string") {
+          toast.error(action.payload, toastError);
+        }
+      })
+
+      .addCase(getChats.fulfilled, (state, action) => {
+        state.chats = action.payload;
+      })
+      .addCase(getChats.rejected, (state, action) => {
+        console.log("getChats error");
       });
   },
 });
