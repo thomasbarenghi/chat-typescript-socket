@@ -1,33 +1,64 @@
-import React, { ReactNode } from "react";
-import Image from "next/image";
+import React, { ReactNode, useState, useEffect } from "react";
+import { getSocket, initSocket } from "@/utils/socket";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store/store";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 
-const arrChats = [
-  {
-    name: "Maria Gomez",
-    message: "Hola, como estas?",
-    time: "20:21",
-    profilePicture: "/image/placeholder.png",
-  },
-  {
-    name: "Juan Zelmer",
-    message: "Que era un array?",
-    time: "17:00",
-    profilePicture: "/image/placeholder.png",
-  },
-  {
-    name: "Sofia Perez",
-    message: "Socket io es genial!",
-    time: "17:00",
-    profilePicture: "/image/placeholder.png",
-  },
-];
+interface IMsg {
+  user: string;
+  msg: string;
+  chatId: string;
+}
 
 const TextSender = () => {
+  const currentUser = useAppSelector(
+    (state) => state.authSession.session.current._id
+  );
+  const chatId: any = useAppSelector((state) => state.chats.currentChat.id);
+
+  const sendMessage = async (e: any) => {
+    e.preventDefault();
+    console.log("chatId", chatId);
+   const msg = e.target.msg.value;
+
+    if (msg) {
+      const message: IMsg = {
+        user: currentUser,
+        msg,
+        chatId: chatId,
+      };
+      console.log("message", message);
+      const socket = getSocket();
+      socket.emit("message", message);
+
+
+    
+      //hacemos reset
+      e.target.msg.value = "";
+    } else {
+      console.log("No hay mensaje");
+    }
+  };
+
   return (
     <>
-    <div className="flex   bg-white border border-violet-200 absolute bottom-6 left-6 right-6 h-[60px] rounded-full">
-     <input className="flex-grow font-normal text-sm px-5 py-2 rounded-full outline-none text-violet-800 placeholder:text-violet-800" placeholder="Escribe un mensaje" />
-    </div>
+      <div className="absolute   bottom-0 left-0 right-0 flex bg-violet-50 px-6  pb-6 ">
+        <div className=" flex h-[60px] w-full rounded-full border border-violet-200 bg-white">
+          <form
+            className="flex w-full items-center justify-between gap-2 px-6 py-3"
+            onSubmit={sendMessage}
+          >
+            <input
+              className="flex-grow rounded-full  py-2 text-sm font-normal text-violet-800 outline-none placeholder:text-violet-800"
+              placeholder="Escribe un mensaje"
+              name="msg"
+            />
+            <button className=" text-sm font-semibold text-violet-800">
+              Enviar
+            </button>
+          </form>
+        </div>
+      </div>
     </>
   );
 };

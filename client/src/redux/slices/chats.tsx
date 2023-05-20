@@ -3,10 +3,14 @@ import axios from "axios";
 import { createUserSession } from "@/utils/userSession";
 const urlServer = process.env.NEXT_PUBLIC_SERVER_URL;
 import { RootState } from "@/redux/store/store";
+import { types } from "util";
 
 const initialState = {
   chats: [],
-  currentChat: [],
+  currentChat: {
+    messages: [],
+    id: "" as string | null,
+  },
 };
 
 //Actions
@@ -21,21 +25,10 @@ export const getCurrentChat = createAsyncThunk(
       const state = getState() as RootState;
       const user = state.authSession.session.current;
 
-      const messages = res.data.messages.map((message: any) => {
-        if (message.sender._id === user._id) {
-          return {
-            ...message,
-            origin: true,
-          };
-        } else {
-          return {
-            ...message,
-            sender: false,
-          };
-        }
-      });
+      const messages = messageFormater({ messages: res.data.messages, user });
+
       console.log("messages", messages);
-      return messages;
+      return { messages: messages, id: chatId };
     } catch (error: any) {
       return rejectWithValue(error.response.data);
     }
@@ -52,13 +45,21 @@ const postsSlice = createSlice({
       state.chats = action.payload;
     },
     setCurrentChat(state, action: PayloadAction<any>) {
-      state.currentChat = action.payload;
+
+      const messages = [...state.currentChat.messages, action.payload.message];
+      const message = messageFormater({ messages: messages, user: action.payload.user });
+
+      state.currentChat.messages = message;
+    },
+    resetChatId(state) {
+      state.currentChat.id = null;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(getCurrentChat.fulfilled, (state, action) => {
-        state.currentChat = action.payload;
+        state.currentChat.messages = action.payload.messages;
+        state.currentChat.id = action.payload.id;
       })
       .addCase(getCurrentChat.rejected, (state, action) => {
         console.log("getCurrentChat error");
@@ -66,6 +67,29 @@ const postsSlice = createSlice({
   },
 });
 
-export const { setChats, setCurrentChat } = postsSlice.actions;
+export const { setChats, setCurrentChat, resetChatId } = postsSlice.actions;
 
 export default postsSlice.reducer;
+
+type Props = {
+  messages: any;
+  user: any;
+};
+
+export const messageFormater = ({ messages, user }: Props) => {
+  const formated = messages.map((message: any) => {
+    if (message.sender._id === user._id) {
+      return {
+        ...message,
+        origin: true,
+      };
+    } else {
+      return {
+        ...message,
+        origin: false,
+      };
+    }
+  });
+
+  return formated;
+};

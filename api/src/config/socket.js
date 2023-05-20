@@ -27,13 +27,14 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("message", async (message) => {
+    console.log("nuevo mensaje:", message);
     try {
       const chat = await Chat.findById(message.chatId);
       if (!chat) {
         return socket.emit("chatError", "El chat no existe");
       }
 
-      const newMessage = new Message({
+      let newMessage = new Message({
         sender: message.user,
         content: message.msg,
         timestamp: Date.now(),
@@ -46,8 +47,17 @@ io.on("connection", async (socket) => {
       chat.messages.push(newMessage);
       await chat.save();
 
-      // Enviar el mensaje a todos los clientes en el chat
-      io.to(message.chatId).emit("newMessage", newMessage);
+      //obtenemos la info del usuario
+
+      const sender = await User.findById(message.user).select(
+        "id email firstName lastName image email "
+      );
+
+      newMessage.sender = sender;
+
+      const newMessageJSON = newMessage.toJSON();
+      console.log("estamos en una sala y recibimos un mensaje", newMessageJSON);
+      io.to(message.chatId).emit("newMessage", newMessageJSON);
     } catch (error) {
       console.log("Error al guardar el mensaje:", error.message);
     }
