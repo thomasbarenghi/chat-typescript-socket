@@ -9,7 +9,8 @@ const SidebarChat = () => {
   const dispatch = useAppDispatch();
   const chats = useAppSelector((state) => state.chats.chats);
   const user = useAppSelector((state) => state.authSession.session.current);
-  const chatsFiltered = chatFormater({ chats, user });
+ const chatsFiltered = chatFormater({ chats, user });
+
   console.log("chatsFiltered", chats);
   const setSala = (e: any) => {
     const socket = getSocket();
@@ -38,7 +39,7 @@ const SidebarChat = () => {
           />
         </div>
         <div>
-          {chatsFiltered.map((chat: any, index: any) => (
+          {chatsFiltered && chatsFiltered.map((chat: any, index: any) => (
             <div
               key={index}
               className="flex cursor-pointer items-center  justify-between"
@@ -58,9 +59,9 @@ const SidebarChat = () => {
                       " " +
                       chat.participants.lastName}
                   </p>
-                  <p className="text-sm font-light">{chat.messages.content}</p>
+                  <p className="text-sm font-light">{chat?.lastMessage?.content}</p>
                   <p className="absolute right-0 top-1 text-sm font-light">
-                    {chat.time}
+                    {chat?.lastMessage?.time}
                   </p>
                 </div>
               </div>
@@ -80,6 +81,10 @@ type Props = {
 };
 
 const chatFormater = ({ chats, user }: Props) => {
+
+  if(chats[0] === null) return null;
+
+  console.log("chats", chats);
   const chatsFiltered = chats.map((chat: any) => {
     const filteredParticipants = chat.participants.filter(
       (participant: any) => participant._id !== user._id
@@ -91,24 +96,24 @@ const chatFormater = ({ chats, user }: Props) => {
       updatedChat.participants = null;
     }
 
-    const messages = chat.messages;
-    const lastMessage = messages[messages.length - 1] ?? { content: "" };
-    updatedChat.messages = lastMessage;
+   // const messages = chat.messages;
+    //const lastMessage = messages[messages.length - 1] ?? { content: "" };
+   // updatedChat.messages = lastMessage;
 
-    const date = new Date(lastMessage.date);
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
+    // const date = new Date(lastMessage.date);
+    // const hours = date.getHours();
+    // const minutes = date.getMinutes();
 
-    const time =
-      !Number.isNaN(hours) && !Number.isNaN(minutes)
-        ? hours + ":" + minutes
-        : "";
+    // const time =
+    //   !Number.isNaN(hours) && !Number.isNaN(minutes)
+    //     ? hours + ":" + minutes
+    //     : "";
 
     const updatedChat2 = {
       ...updatedChat,
       messages: updatedChat.messages,
       participants: updatedChat.participants,
-      time: time,
+     // time: time,
     };
 
     return updatedChat2;

@@ -6,27 +6,32 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 
 const ChatContainer = () => {
   const dispatch = useAppDispatch();
-
   const currentChat = useAppSelector(
     (state) => state.chats.currentChat.messages
   );
-
-  const currentUser = useAppSelector(
-    (state) => state.authSession.session.current
-  );
-
   const chatId = useAppSelector((state) => state.chats.currentChat.id);
 
   useEffect(() => {
+
     const socket = getSocket();
     socket.on("newMessage", (message: any) => {
       console.log("newMessage", message);
-      dispatch(setCurrentChat({ message: message, user: currentUser })); //chatId
+      dispatch(setCurrentChat(message)); //chatId
     });
+
+    // console.log("newChat estamos escuchando");
+    // socket.on("newChat", () => {
+    //   console.log("newChat");
+    // });
 
     return () => {
       socket.off("newMessage");
+      // socket.off("newChat");
     };
+  }, []);
+
+  useEffect(() => {
+    console.log("test");
   }, []);
 
   return (
@@ -35,7 +40,7 @@ const ChatContainer = () => {
         {currentChat &&
           chatId !== "" &&
           chatId !== null &&
-          currentChat.map((message: any, index) => {
+          currentChat.map((message: any, index: any) => {
             const isThomas = message.origin === true;
             return (
               <div

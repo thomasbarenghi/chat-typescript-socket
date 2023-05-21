@@ -61,8 +61,6 @@ router.get(
 
 router.get("/protected", isLoggedIn, (req, res) => {
   const id = req.user._id.toString();
-  console.log(id);
-  console.log("session:", req.sessionID);
   //res.send('You are logged in');
   //return res.json({message: 'You are logged in', id: id});
   return res.redirect(`${CLIENT_URL}?id=${id}&session=${req.sessionID}`);
@@ -84,12 +82,12 @@ router.get("/logout", (req, res) => {
 router.get("/verify", async (req, res) => {
   //devolvemos la cookie de sesión
   const { session } = req.headers;
-  console.log("sessionID:", session);
+
   const mongoSession = await store.db
     .collection("sessions")
     .findOne({ _id: session });
 
-  console.log("mongoSession:", mongoSession);
+ 
   //console.log("store", store.all);
   if (mongoSession) {
     return res

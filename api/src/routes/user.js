@@ -57,32 +57,92 @@ router.get("/:id/chats", async (req, res) => {
       },
     ]);
 
-    const formattedChats = chats.map((chat) => {
-      const messages = chat.messages.map((message) => {
-        const isCurrentUser = message.sender.toString() === id;
+    const formattedChats = !chats.messages
+      ? chats
+      : chats.map((chat) => {
+          const messages = chat.messages.map((message) => {
+            const isCurrentUser = message.sender.toString() === id;
 
-        return {
-          ...message.toJSON(),
-          origin: isCurrentUser,
-        };
-      });
+            return {
+              ...message.toJSON(),
+              origin: isCurrentUser,
+            };
+          });
 
-      const lastMessage = {
-        ...chat.lastMessage.toJSON(),
-        time: formatMessageTime(chat.lastMessage),
-      };
+          const lastMessage = {
+            ...chat.lastMessage.toJSON(),
+            time: formatMessageTime(chat.lastMessage),
+          };
 
-      return {
-        ...chat.toJSON(),
-        messages: messages,
-        lastMessage: lastMessage,
-      };
-    });
+          return {
+            ...chat.toJSON(),
+            messages: messages,
+            lastMessage: lastMessage,
+          };
+        });
 
     res.json(formattedChats);
   } catch (error) {
     console.error("Error al obtener los chats:", error);
     res.status(500).json({ error: "Error al obtener los chats" });
+  }
+});
+
+//obtenemos un chat del usuario actual
+router.get("/:id/chats/:chatId", async (req, res) => {
+  const { id, chatId } = req.params;
+
+  try {
+    const chats = await Chat.findById(chatId).populate([
+      {
+        path: "participants",
+        model: "User",
+        select: "firstName lastName _id image email",
+      },
+      {
+        path: "messages",
+        model: "Message",
+        populate: {
+          path: "sender",
+          model: "User",
+          select: "firstName lastName _id image email",
+        },
+      },
+      {
+        path: "lastMessage",
+        model: "Message",
+        populate: {
+          path: "sender",
+          model: "User",
+          select: "_id",
+        },
+      },
+    ]);
+
+  
+
+    const formattedChats = !chats.messages || chats.messages.length === 0
+    ? chats
+    : {
+      ...chats.toJSON(),
+      messages: chats.messages.map((message) => {
+        const isCurrentUser = message.sender._id.toString() === id;
+
+        return {
+          ...message.toJSON(),
+          origin: isCurrentUser,
+        };
+      }),
+      lastMessage: {
+        ...chats.lastMessage.toJSON(),
+        time: formatMessageTime(chats.lastMessage),
+      },
+    };
+
+    res.json(formattedChats);
+  } catch (error) {
+    console.error("Error al obtener el chat:", error);
+    res.status(500).json({ error: "Error al obtener el chat" });
   }
 });
 
@@ -98,11 +158,22 @@ router.get("/:id", async (req, res) => {
       {
         path: "chats",
         model: "Chat",
-        populate: {
-          path: "participants",
-          model: "User",
-          select: "firstName lastName _id image email",
-        },
+        populate: [
+          {
+            path: "participants",
+            model: "User",
+            select: "firstName lastName _id image email",
+          },
+          {
+            path: "lastMessage",
+            model: "Message",
+            populate: {
+              path: "sender",
+              model: "User",
+              select: "_id",
+            },
+          },
+        ],
       },
     ]);
 

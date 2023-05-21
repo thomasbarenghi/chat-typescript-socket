@@ -12,7 +12,7 @@ passport.use(
       callbackURL: `${BACKEND_URL}api/auth/google/callback`,
     },
     async function (accessToken, refreshToken, profile, done) {
-      console.log("Trying to access google acount", profile);
+    
       try {
         let user = await User.findOne({ googleId: profile.id });
         if (user) {
@@ -35,7 +35,7 @@ passport.use(
             password: "",
           };
           user = await User.create(newUser);
-          console.log("creating new user");
+      
           return done(null, user);
         }
       } catch (err) {

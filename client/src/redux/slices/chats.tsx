@@ -4,26 +4,32 @@ import { RootState } from "@/redux/store/store";
 import { toast } from "sonner";
 import { toastError, toastWarning, toastSuccess } from "@/utils/toastStyles";
 const urlServer = process.env.NEXT_PUBLIC_SERVER_URL;
+import { getSocket, initSocket } from "@/utils/socket";
 
 const initialState = {
-  chats: [],
+  chats: [] as any,
   currentChat: {
-    messages: [],
+    messages: [] as any,
     lastMessage: {},
     id: "" as string | null,
   },
 };
+
+
 
 //Actions
 export const getCurrentChat = createAsyncThunk(
   "chats/getCurrentChat",
   async (chatId: string, { rejectWithValue, getState }) => {
     try {
-      const res = await axios.get(`${urlServer}api/chat/${chatId}`);
       const state = getState() as RootState;
       const user = state.authSession.session.current;
-      const messages = messageFormater({ messages: res.data.messages, user });
-      return { messages: messages, id: chatId };
+      const res = await axios.get(
+        `${urlServer}api/user/${user._id}/chats/${chatId}`
+      );
+      // const messages = messageFormater({ messages: res.data.messages, user });
+      console.log("res.data.messages", res.data.messages);
+      return { messages: res.data.messages, id: chatId };
     } catch (error: any) {
       return rejectWithValue(error.response.data);
     }
@@ -34,6 +40,7 @@ export const newChat = createAsyncThunk(
   "chats/newChat",
   async (id: string, { rejectWithValue, getState, dispatch }) => {
     try {
+      console.log("id rec", id);
       const state = getState() as RootState;
       const user = state.authSession.session.current;
       if (id === user._id) {
@@ -46,7 +53,7 @@ export const newChat = createAsyncThunk(
       });
 
       if (chat) {
-        return rejectWithValue("Ya existe un chat con este usuario");
+      //  return rejectWithValue("Ya existe un chat con este usuario");
       }
 
       const res = await axios.post(`${urlServer}api/chat/`, {
@@ -55,6 +62,12 @@ export const newChat = createAsyncThunk(
       });
 
       dispatch(getChats());
+      const socket = getSocket();
+      console.log("socket:", id);
+      socket.emit("newChat", {
+        toUserId: id,
+        chatId: res.data._id,
+      });
 
       return res.data;
     } catch (error: any) {
@@ -70,6 +83,7 @@ export const getChats = createAsyncThunk(
       const state = getState() as RootState;
       const user = state.authSession.session.current;
       const res = await axios.get(`${urlServer}api/user/${user._id}/chats`);
+      console.log("res.data", res.data);
       return res.data;
     } catch (error: any) {
       return rejectWithValue(error);
@@ -86,13 +100,25 @@ const postsSlice = createSlice({
       state.chats = action.payload;
     },
     setCurrentChat(state, action: PayloadAction<any>) {
-      const messages = [...state.currentChat.messages, action.payload.message];
-      const message = messageFormater({
-        messages: messages,
-        user: action.payload.user,
+      console.log("action.payload.newMessage", action.payload);
+
+      //buscamos el index del chat en el array de chats
+      const index: any = state.chats.findIndex((chat: any) => {
+        return chat._id === action.payload.chatId;
       });
 
-      state.currentChat.messages = message;
+      //si existe actualizamos el lastMessage
+      console.log("index", index);
+      if (index !== -1) {
+        console.log("index act", index);
+        state.chats[index].lastMessage = action.payload.newMessage;
+      }
+
+      state.currentChat.messages = [
+        ...state.currentChat.messages,
+        action.payload.newMessage,
+      ];
+      state.currentChat.lastMessage = action.payload.newMessage;
     },
     resetChatId(state) {
       state.currentChat.id = null;
@@ -132,25 +158,26 @@ export const { setChats, setCurrentChat, resetChatId } = postsSlice.actions;
 
 export default postsSlice.reducer;
 
-type Props = {
-  messages: any;
-  user: any;
-};
+// type Props = {
+//   messages: any;
+//   user: any;
+// };
 
-export const messageFormater = ({ messages, user }: Props) => {
-  const formated = messages.map((message: any) => {
-    if (message.sender._id === user._id) {
-      return {
-        ...message,
-        origin: true,
-      };
-    } else {
-      return {
-        ...message,
-        origin: false,
-      };
-    }
-  });
+// export const messageFormater = ({ messages, user }: Props) => {
+//   console.log("messages", messages);
+//   const formated = messages.map((message: any) => {
+//     if (message.sender._id === user._id) {
+//       return {
+//         ...message,
+//         origin: true,
+//       };
+//     } else {
+//       return {
+//         ...message,
+//         origin: false,
+//       };
+//     }
+//   });
 
-  return formated;
-};
+//   return formated;
+// };

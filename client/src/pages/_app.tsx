@@ -16,16 +16,10 @@ import { getSocket, initSocket } from "../utils/socket";
 import { Toaster } from "sonner";
 
 const App: NextPage<AppProps> = ({ Component, pageProps }) => {
-  useEffect(() => {
-    const connectSocket = async () => {
-      try {
-        await initSocket();
-      } catch (error) {
-        console.error("Error al conectar el socket:", error);
-      }
-    };
-    connectSocket();
-  }, []);
+
+
+  //verificamos si el usuario esta en la pagina de chat
+
 
   return (
     <>

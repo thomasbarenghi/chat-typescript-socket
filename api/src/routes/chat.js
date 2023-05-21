@@ -14,7 +14,7 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Faltan datos" });
     }
 
-    console.log("currentUserID:", currentUserID);
+    console.log("currentUserID:", currentUserID, otherUserID);
 
     // Crea una instancia del modelo Chat
     const newChat = new Chat({

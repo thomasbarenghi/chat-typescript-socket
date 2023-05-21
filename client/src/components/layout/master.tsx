@@ -1,11 +1,13 @@
-import React, { ReactNode, useState, useEffect } from "react";
+import React, { ReactNode, useState, useEffect, useMemo } from "react";
 import { SidebarChat, TextSender, ChatContainer } from "@/components";
 import Image from "next/image";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store/store";
-import { resetChatId, newChat } from "@/redux/slices/chats";
+import { resetChatId, newChat, getChats } from "@/redux/slices/chats";
 import { useAppDispatch } from "@/redux/hooks";
 import axios from "axios";
+import { getSocket, initSocket } from "@/utils/socket";
+import { debounce } from "lodash";
 
 type Props = {
   children: ReactNode;
@@ -13,16 +15,51 @@ type Props = {
 
 const MasterLayout: React.FC<Props> = ({ children }) => {
   const dispatch = useAppDispatch();
+  const socket = getSocket();
+  const chatId = useSelector((state: RootState) => state.chats.currentChat.id);
   const session = useSelector(
     (state: RootState) => state?.authSession.session.current
   );
-  console.log("session", session);
+
+  const delayedFetchGenres = useMemo(() => {
+    return debounce(async () => {
+      await initSocket(session._id);
+    }, 300);
+  }, [dispatch]);
+
+  console.log("socket", socket);
+
+  useEffect(() => {
+    const connectSocket = async () => {
+      try {
+        const cancelDebounce = () => {
+          delayedFetchGenres.cancel();
+        };
+        delayedFetchGenres();
+        return cancelDebounce;
+      } catch (error) {
+        console.error("Error al conectar el socket:", error);
+      }
+    };
+    connectSocket();
+  }, [delayedFetchGenres]);
+
+  useEffect(() => {
+    if (socket) {
+      console.log("new chat escuchando");
+      socket.on("newChat", () => {
+        console.log("newChat entro");
+        dispatch(getChats());
+      });
+      return () => {
+        socket.off("newChat");
+      };
+    }
+  }, [socket]);
 
   useEffect(() => {
     dispatch(resetChatId());
   }, []);
-
-  const chatId = useSelector((state: RootState) => state.chats.currentChat.id);
 
   return (
     <>
@@ -78,7 +115,9 @@ const Header = (session: any) => {
               height={40}
               className=" aspect-square rounded-full bg-white object-cover p-[2px] "
             />
-            <p className="text-sm font-medium text-violet-800">{session.session.email}</p>
+            <p className="text-sm font-medium text-violet-800">
+              {session.session.email}
+            </p>
           </div>
         </div>
       </div>
@@ -103,6 +142,7 @@ const SearchUser = () => {
   };
 
   const createChat = async (id: string) => {
+    console.log("id user", id);
     dispatch(newChat(id));
   };
 

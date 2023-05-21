@@ -1,25 +1,30 @@
 // ../socket.ts
 
-import { io, Socket } from 'socket.io-client';
+import { io, Socket } from "socket.io-client";
 
 let socket: Socket;
 
-const urlServer = process.env.NEXT_PUBLIC_SERVER_URL
+const urlServer = process.env.NEXT_PUBLIC_SERVER_URL;
 
-export const initSocket = () => {
-  socket = io(`${urlServer}`); // Reemplaza la URL con la dirección de tu servidor backend
+export const initSocket = (id: string) => {
 
-  socket.on('connect', () => {
-    console.log('Socket conectado');
-    return true
+  socket = io(`${urlServer}`, {
+    query: {
+      userId: id || "",
+    },
+  });
+
+  socket.on("connect", () => {
+    console.log("Socket conectado");
+    return true;
   });
 };
 
-
 export const getSocket = () => {
-  console.log('getSocket', socket);
+  console.log("getSocket", socket);
   if (!socket) {
-    throw new Error('Socket.io no inicializado. Llama a initSocket() primero.');
+    console.log("Socket.io no inicializado. Llama a initSocket() primero.");
   }
+  console.log("getSocket ok", socket);
   return socket;
 };
