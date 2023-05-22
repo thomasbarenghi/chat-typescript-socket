@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 require("dotenv").config();
-const { DB_URI, } = process.env;
+const { DB_URI } = process.env;
 
 const dbConnect = async () => {
   try {
@@ -17,7 +17,7 @@ const dbConnect = async () => {
     console.error(err);
   }
 };
-process.on('unhandledRejection', error => {
-  console.log('unhandledRejection', error.message);
+process.on("unhandledRejection", (error) => {
+  console.log("unhandledRejection", error.message);
 });
-module.exports = {dbConnect};
+module.exports = { dbConnect };

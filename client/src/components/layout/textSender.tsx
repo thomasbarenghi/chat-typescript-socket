@@ -12,7 +12,6 @@ interface IMsg {
 }
 
 const TextSender = () => {
-
   const reader = new FileReader();
   const currentUser = useAppSelector(
     (state) => state.authSession.session.current._id
@@ -24,24 +23,20 @@ const TextSender = () => {
     const image = e.target.image.files[0];
     if (image) {
       console.log("Hay imagen seleccionada");
-      reader.onload = function () {
-        const base64 = reader.result;
+
         const socket = getSocket();
 
         const message: IMsg = {
           user: currentUser,
           msg: null,
           chatId: chatId,
-          image: image,
+          image: {
+            file: image,
+            fileName: image.name,
+          },
         };
-        console.log("message", message);
+        console.log("message ok", message);
         socket.emit("message", message);
-
-        //quitamos la imagen del estado
-
-      };
-
-      reader.readAsDataURL(image);
 
       // Resto del código de envío del mensaje...
     } else {
@@ -57,12 +52,10 @@ const TextSender = () => {
       };
 
       socket.emit("message", message);
-
     }
     //reseteamos el formulario
     e.target.reset();
   };
-
 
   return (
     <>

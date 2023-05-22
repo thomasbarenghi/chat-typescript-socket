@@ -87,7 +87,6 @@ router.get("/verify", async (req, res) => {
     .collection("sessions")
     .findOne({ _id: session });
 
- 
   //console.log("store", store.all);
   if (mongoSession) {
     return res

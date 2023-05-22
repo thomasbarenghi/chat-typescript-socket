@@ -2,107 +2,21 @@ const express = require("express");
 const router = express.Router();
 const Chat = require("../models/index").chatModel;
 const User = require("../models/index").userModel;
-const moment = require("moment");
-//Obtenemos los chats del usuario actual
+const { populateChatFields } = require("../utils/mongo/populateChatResponse");
+const {
+  formatMessagesChatsForResponse,
+} = require("../utils/mongo/formatMessagesChatsForResponse");
 
-// router.get("/:id/chats", async (req, res) => {
-//   const { id } = req.params;
-
-//   try {
-//     const chats = await Chat.find({ participants: { $in: [id] } }).populate([
-//       {
-//         path: "participants",
-//         model: "User",
-//         select: "firstName lastName _id image",
-//       },
-//     ]);
-//     res.json(chats);
-//   } catch (error) {
-//     console.error("Error al obtener los chats:", error);
-//     res.status(500).json({ error: "Error al obtener los chats" });
-//   }
-// });
-
-// const formatMessageTime = (message) => {
-//   const today = moment().startOf("day");
-//   const messageDate = moment(message.date);
-//   console.log("messageDate", messageDate);
-//   const diffInDays = today.diff(messageDate, "days");
-
-//   if (diffInDays === 0) {
-//     return messageDate.format("HH:mm");
-//   } else if (diffInDays === 1) {
-//     return "Ayer";
-//   } else {
-//     return messageDate.format("DD/MM/YYYY");
-//   }
-// };
-
-const formatMessageTime = (message) => {
-  const today = moment().startOf("day");
-  const messageDate = moment(message.date);
-  const diffInDays = today.diff(messageDate, "days");
-
-  if (diffInDays === 0) {
-    return messageDate.format("HH:mm");
-  } else if (diffInDays === 1) {
-    return "Ayer, " + messageDate.format("HH:mm");
-  } else if (messageDate.year() === today.year()) {
-    return messageDate.format("DD/MM, HH:mm");
-  } else {
-    return messageDate.format("DD/MM/YYYY, HH:mm");
-  }
-};
-
-
+//--------------------OBTENCION--------------------
+//CHATS DE UN USUARIO
 router.get("/:id/chats", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const chats = await Chat.find({ participants: { $in: [id] } }).populate([
-      {
-        path: "participants",
-        model: "User",
-        select: "firstName lastName _id image",
-      },
-      {
-        path: "messages",
-        model: "Message",
-      },
-      {
-        path: "lastMessage",
-        model: "Message",
-      },
-    ]);
+    const chats = await Chat.find({ participants: { $in: [id] } });
+    await populateChatFields(chats);
 
-    const formattedChats = !chats.messages
-      ? chats
-      : chats.map((chat) => {
-          const messages = chat.messages.map((message) => {
-            const isCurrentUser = message.sender.toString() === id;
-
-            return {
-              ...message.toJSON(),
-              origin: isCurrentUser,
-            };
-          });
-
-          const lastMessage = {
-            ...chat.lastMessage.toJSON(),
-            time: formatMessageTime(chat.lastMessage),
-          };
-
-          return {
-            ...chat.toJSON(),
-            messages: messages,
-            lastMessage: lastMessage,
-          };
-        });
-
-    //ordenamos los chats por lastModified
-    formattedChats.sort((a, b) => {
-      return b.lastModified - a.lastModified;
-    });
+    const formattedChats = formatMessagesChatsForResponse(chats, id);
 
     res.json(formattedChats);
   } catch (error) {
@@ -111,56 +25,15 @@ router.get("/:id/chats", async (req, res) => {
   }
 });
 
-//obtenemos un chat del usuario actual
+//CHAT DE UN USUARIO
 router.get("/:id/chats/:chatId", async (req, res) => {
   const { id, chatId } = req.params;
 
   try {
-    const chats = await Chat.findById(chatId).populate([
-      {
-        path: "participants",
-        model: "User",
-        select: "firstName lastName _id image email",
-      },
-      {
-        path: "messages",
-        model: "Message",
-        populate: {
-          path: "sender",
-          model: "User",
-          select: "firstName lastName _id image email",
-        },
-      },
-      {
-        path: "lastMessage",
-        model: "Message",
-        populate: {
-          path: "sender",
-          model: "User",
-          select: "_id",
-        },
-      },
-    ]);
+    const chats = await Chat.findById(chatId);
+    await populateChatFields(chats);
 
-    const formattedChats =
-      !chats.messages || chats.messages.length === 0
-        ? chats
-        : {
-            ...chats.toJSON(),
-            messages: chats.messages.map((message) => {
-              const isCurrentUser = message.sender._id.toString() === id;
-
-              return {
-                ...message.toJSON(),
-                origin: isCurrentUser,
-                time: formatMessageTime(message),
-              };
-            }),
-            lastMessage: {
-              ...chats.lastMessage.toJSON(),
-              time: formatMessageTime(chats.lastMessage),
-            },
-          };
+    const formattedChats = formatMessagesChatsForResponse(chats, id);
 
     res.json(formattedChats);
   } catch (error) {
@@ -169,59 +42,17 @@ router.get("/:id/chats/:chatId", async (req, res) => {
   }
 });
 
-//obtenemos los datos del usuario actual
-
+//USUARIO POR ID
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
-  //buscamos en mongo
-
   try {
-    const user = await User.findById(id).populate([
-      {
-        path: "chats",
-        model: "Chat",
-        populate: [
-          {
-            path: "participants",
-            model: "User",
-            select: "firstName lastName _id image email",
-          },
-          {
-            path: "lastMessage",
-            model: "Message",
-            populate: {
-              path: "sender",
-              model: "User",
-              select: "_id",
-            },
-          },
-        ],
-      },
-    ]);
-
-    //creamos time para el lastMessage
-    const formattedChats = user.chats.map((chat) => {
-      const lastMessage = {
-        ...chat.lastMessage.toJSON(),
-        time: formatMessageTime(chat.lastMessage),
-        content: chat.lastMessage.type === "text" ? chat.lastMessage.content : "Archivo",
-      };
-
-      return {
-        ...chat.toJSON(),
-        lastMessage: lastMessage,
-      };
-    }).sort((a, b) => {
-      return b.lastModified - a.lastModified;
-    });
-
-    //user.chats = formattedChats;
-    console.log("user", formattedChats);
+    const user = await User.findById(id).populate("chats");
+    await populateChatFields(user.chats);
 
     const formattedUser = {
       ...user.toJSON(),
-      chats: formattedChats,
+      chats: formatMessagesChatsForResponse(user.chats, id),
     };
 
     res.json(formattedUser);
@@ -231,7 +62,7 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-//obtenemos todos los usuarios
+//USUARIOS
 router.get("/", async (req, res) => {
   const { email, page = 1, limit = 10 } = req.query;
 

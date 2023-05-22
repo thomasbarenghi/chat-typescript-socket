@@ -1,8 +1,8 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-const googleRoutes = require('./google');
+const googleRoutes = require("./google");
 
-router.use('/google', googleRoutes);
+router.use("/google", googleRoutes);
 
 module.exports = router;

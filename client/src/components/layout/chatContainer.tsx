@@ -37,9 +37,10 @@ console.log("chats", chats);
     console.log("test");
   }, []);
 
-  function isURL(str: string) {
+  function isURL(str: any) {
     try {
-      new URL(str);
+      if(str.type === "text") return false;
+      new URL(str.content);
       return true;
     } catch (error) {
       return false;
@@ -74,7 +75,7 @@ console.log("chats", chats);
                   />
                   {
                     //verificamos si es una url
-                    isURL(message.content) ? (
+                    isURL(message) ? (
                       <Image
                         src={message.content}
                         alt="imagen"
