@@ -3,7 +3,7 @@ import { SidebarChat, TextSender, ChatContainer } from "@/components";
 import Image from "next/image";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store/store";
-import { resetChatId, newChat, getChats } from "@/redux/slices/chats";
+import { resetChatId, newChat, getChats, chatUserStatus } from "@/redux/slices/chats";
 import { useAppDispatch } from "@/redux/hooks";
 import axios from "axios";
 import { getSocket, initSocket } from "@/utils/socket";
@@ -51,8 +51,13 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
         console.log("newChat entro");
         dispatch(getChats());
       });
+      console.log("otherUserStatus escuchando");
+      socket.on("otherUserStatus", (data: any) => {
+        dispatch(chatUserStatus(data));
+      });
       return () => {
         socket.off("newChat");
+        socket.off("otherUserStatus");
       };
     }
   }, [socket]);

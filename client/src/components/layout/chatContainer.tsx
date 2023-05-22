@@ -10,10 +10,8 @@ const ChatContainer = () => {
     (state) => state.chats.currentChat.messages
   );
   const chatId = useAppSelector((state) => state.chats.currentChat.id);
-
+  const socket = getSocket();
   useEffect(() => {
-
-    const socket = getSocket();
     socket.on("newMessage", (message: any) => {
       console.log("newMessage", message);
       dispatch(setCurrentChat(message)); //chatId
@@ -28,7 +26,7 @@ const ChatContainer = () => {
       socket.off("newMessage");
       // socket.off("newChat");
     };
-  }, []);
+  }, [socket]);
 
   useEffect(() => {
     console.log("test");
@@ -45,27 +43,40 @@ const ChatContainer = () => {
             return (
               <div
                 key={index}
-                className={`flex  ${
-                  isThomas
-                    ? "flex-row-reverse justify-start"
-                    : "flex-row  justify-start"
-                } h-max w-full items-center gap-2 px-6 py-3`}
+                className="flex flex-col w-full gap-1 px-6 py-3"
               >
-                <Image
-                  src={message.sender.image}
-                  alt="perfil"
-                  width={55}
-                  height={55}
-                  className="aspect-square rounded-full bg-white object-cover p-[2px]"
-                />
-
-                <p
-                  className={`bg-white p-4 text-sm font-normal text-violet-800 ${
-                    isThomas ? "rounded-3xl" : "rounded-3xl"
-                  } `}
+                <div
+                  className={`flex  ${
+                    isThomas
+                      ? "flex-row-reverse justify-start"
+                      : "flex-row  justify-start"
+                  } h-max w-full items-center gap-2 `}
                 >
-                  {message.content}
-                </p>
+                  <Image
+                    src={message.sender.image}
+                    alt="perfil"
+                    width={55}
+                    height={55}
+                    className="aspect-square rounded-full bg-white object-cover p-[2px]"
+                  />
+
+                  <p
+                    className={`bg-white p-4 text-sm font-normal text-violet-800 ${
+                      isThomas ? "rounded-3xl" : "rounded-3xl"
+                    } max-w-[75%] `}
+                  >
+                    {message.content}
+                  </p>
+                </div>
+                <div
+                  className={`flex  ${
+                    isThomas
+                      ? "flex-row-reverse justify-start"
+                      : "flex-row  justify-start"
+                  } h-max w-full items-center px-[70px] `}
+                >
+                <p className="text-xs text-violet-400">{message.time}</p>
+                </div>
               </div>
             );
           })}

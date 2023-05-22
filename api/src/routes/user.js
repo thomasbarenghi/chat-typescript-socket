@@ -23,6 +23,21 @@ const moment = require("moment");
 //   }
 // });
 
+// const formatMessageTime = (message) => {
+//   const today = moment().startOf("day");
+//   const messageDate = moment(message.date);
+//   console.log("messageDate", messageDate);
+//   const diffInDays = today.diff(messageDate, "days");
+
+//   if (diffInDays === 0) {
+//     return messageDate.format("HH:mm");
+//   } else if (diffInDays === 1) {
+//     return "Ayer";
+//   } else {
+//     return messageDate.format("DD/MM/YYYY");
+//   }
+// };
+
 const formatMessageTime = (message) => {
   const today = moment().startOf("day");
   const messageDate = moment(message.date);
@@ -31,11 +46,14 @@ const formatMessageTime = (message) => {
   if (diffInDays === 0) {
     return messageDate.format("HH:mm");
   } else if (diffInDays === 1) {
-    return "Ayer";
+    return "Ayer, " + messageDate.format("HH:mm");
+  } else if (messageDate.year() === today.year()) {
+    return messageDate.format("DD/MM, HH:mm");
   } else {
-    return messageDate.format("DD/MM/YYYY");
+    return messageDate.format("DD/MM/YYYY, HH:mm");
   }
 };
+
 
 router.get("/:id/chats", async (req, res) => {
   const { id } = req.params;
@@ -81,6 +99,11 @@ router.get("/:id/chats", async (req, res) => {
           };
         });
 
+    //ordenamos los chats por lastModified
+    formattedChats.sort((a, b) => {
+      return b.lastModified - a.lastModified;
+    });
+
     res.json(formattedChats);
   } catch (error) {
     console.error("Error al obtener los chats:", error);
@@ -119,25 +142,25 @@ router.get("/:id/chats/:chatId", async (req, res) => {
       },
     ]);
 
-  
+    const formattedChats =
+      !chats.messages || chats.messages.length === 0
+        ? chats
+        : {
+            ...chats.toJSON(),
+            messages: chats.messages.map((message) => {
+              const isCurrentUser = message.sender._id.toString() === id;
 
-    const formattedChats = !chats.messages || chats.messages.length === 0
-    ? chats
-    : {
-      ...chats.toJSON(),
-      messages: chats.messages.map((message) => {
-        const isCurrentUser = message.sender._id.toString() === id;
-
-        return {
-          ...message.toJSON(),
-          origin: isCurrentUser,
-        };
-      }),
-      lastMessage: {
-        ...chats.lastMessage.toJSON(),
-        time: formatMessageTime(chats.lastMessage),
-      },
-    };
+              return {
+                ...message.toJSON(),
+                origin: isCurrentUser,
+                time: formatMessageTime(message),
+              };
+            }),
+            lastMessage: {
+              ...chats.lastMessage.toJSON(),
+              time: formatMessageTime(chats.lastMessage),
+            },
+          };
 
     res.json(formattedChats);
   } catch (error) {
@@ -177,7 +200,30 @@ router.get("/:id", async (req, res) => {
       },
     ]);
 
-    res.json(user);
+    //creamos time para el lastMessage
+    const formattedChats = user.chats.map((chat) => {
+      const lastMessage = {
+        ...chat.lastMessage.toJSON(),
+        time: formatMessageTime(chat.lastMessage),
+      };
+
+      return {
+        ...chat.toJSON(),
+        lastMessage: lastMessage,
+      };
+    }).sort((a, b) => {
+      return b.lastModified - a.lastModified;
+    });
+
+    //user.chats = formattedChats;
+    console.log("user", formattedChats);
+
+    const formattedUser = {
+      ...user.toJSON(),
+      chats: formattedChats,
+    };
+
+    res.json(formattedUser);
   } catch (error) {
     console.error("Error al obtener el usuario:", error.message);
     res.status(500).json({ error: "Error al obtener el usuario" });

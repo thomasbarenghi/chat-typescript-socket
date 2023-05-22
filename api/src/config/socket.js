@@ -16,19 +16,30 @@ const io = new Server({
 io.on("connection", async (socket) => {
   const userId = socket.handshake.query.userId;
   socket.clientIdMaster = userId;
-  console.log("usuario conectado", userId);
+  // socket.onlineStatus = {
+  //   status: true,
+  //   lastModified: new Date(Date.now()).toISOString(),
+  // };
 
-  if(userId && typeof userId === "string"){
-    console.log("usuario conectado a ", userId);
-  socket.join(userId);
+  if (userId && typeof userId === "string") {
+    socket.join(userId);
   }
   //console.log("OBJETO SOCKET:", io.sockets.sockets.values());
 
   socket.on("selectChat", async (chatId2) => {
     const chatId = chatId2.chatId;
+    const otherUserId = chatId2.otherUserId;
+
+    const socketToCheck = findAllSocketsByClientIdMaster(otherUserId);
+    console.log("socketToCheck", typeof socketToCheck);
 
     try {
       socket.join(chatId);
+      console.log("todo bien, emitimos el chatConfig a", userId);
+      io.to(userId).emit("otherUserStatus", {
+        chatId: chatId,
+        status: Object.keys(socketToCheck).length > 0 ? true : false,
+      });
     } catch (error) {
       console.log("Error al seleccionar el chat:", error.message);
     }
@@ -56,6 +67,7 @@ io.on("connection", async (socket) => {
       chat.messages.push(newMessage);
 
       chat.lastMessage = newMessage._id;
+      chat.lastModified = Date.now();
 
       await chat.save();
 
@@ -102,6 +114,16 @@ io.on("connection", async (socket) => {
     //   io.to(userId).emit("newChat");
     // });
   });
+
+  socket.on("onlineStatus", (data) => {
+    const status = data.status;
+
+    // socket.onlineStatus = {
+    //   status: status,
+    //   lastModified: new Date(Date.now()).toISOString(),
+    // };
+    // console.log("onlineStatus", socket.onlineStatus, socket.clientIdMaster);
+  });
 });
 
 function findAllSocketsByClientIdMaster(clientIdMaster) {
@@ -113,7 +135,7 @@ function findAllSocketsByClientIdMaster(clientIdMaster) {
       matchingSockets.push(socket);
     }
   }
-  console.log("matchingSockets", matchingSockets);
+
   return matchingSockets;
 }
 

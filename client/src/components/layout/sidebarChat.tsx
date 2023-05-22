@@ -9,14 +9,17 @@ const SidebarChat = () => {
   const dispatch = useAppDispatch();
   const chats = useAppSelector((state) => state.chats.chats);
   const user = useAppSelector((state) => state.authSession.session.current);
- const chatsFiltered = chatFormater({ chats, user });
+  const chatsFiltered = chatFormater({ chats, user });
 
   console.log("chatsFiltered", chats);
   const setSala = (e: any) => {
     const socket = getSocket();
     console.log("e.chatId", e.chatId);
+    console.log("e.otherUserId", e.otherUserId._id);
+
     socket.emit("selectChat", {
       chatId: e.chatId,
+      otherUserId: e.otherUserId._id,
     });
     dispatch(getCurrentChat(e.chatId));
   };
@@ -39,34 +42,39 @@ const SidebarChat = () => {
           />
         </div>
         <div>
-          {chatsFiltered && chatsFiltered.map((chat: any, index: any) => (
-            <div
-              key={index}
-              className="flex cursor-pointer items-center  justify-between"
-              onClick={(e) => setSala({ chatId: chat._id })}
-            >
-              <div className="flex w-full items-center justify-start gap-2   py-2">
-                <Image
-                  src={chat.participants.image}
-                  alt="logo"
-                  width={60}
-                  height={60}
-                  className=" aspect-square rounded-full object-cover"
-                />
-                <div className="relative flex w-full flex-col gap-0">
-                  <p className="text-base font-medium">
-                    {chat.participants.firstName +
-                      " " +
-                      chat.participants.lastName}
-                  </p>
-                  <p className="text-sm font-light">{chat?.lastMessage?.content}</p>
-                  <p className="absolute right-0 top-1 text-sm font-light">
-                    {chat?.lastMessage?.time}
-                  </p>
+          {chatsFiltered &&
+            chatsFiltered.map((chat: any, index: any) => (
+              <div
+                key={index}
+                className="flex cursor-pointer items-center  justify-between"
+                onClick={(e) =>
+                  setSala({ chatId: chat._id, otherUserId: chat.participants })
+                }
+              >
+                <div className="flex w-full items-center justify-start gap-2   py-2">
+                  <Image
+                    src={chat.participants.image}
+                    alt="logo"
+                    width={60}
+                    height={60}
+                    className=" aspect-square rounded-full object-cover"
+                  />
+                  <div className="relative flex w-full flex-col gap-0">
+                    <p className="text-base font-medium">
+                      {chat.participants.firstName +
+                        " " +
+                        chat.participants.lastName}
+                    </p>
+                    <p className="text-sm font-light">
+                      {chat?.lastMessage?.content}
+                    </p>
+                    <p className="absolute right-0 top-1 text-sm font-light">
+                      {chat?.lastMessage?.time}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       </div>
     </>
@@ -81,8 +89,7 @@ type Props = {
 };
 
 const chatFormater = ({ chats, user }: Props) => {
-
-  if(chats[0] === null) return null;
+  if (chats[0] === null) return null;
 
   console.log("chats", chats);
   const chatsFiltered = chats.map((chat: any) => {
@@ -96,9 +103,9 @@ const chatFormater = ({ chats, user }: Props) => {
       updatedChat.participants = null;
     }
 
-   // const messages = chat.messages;
+    // const messages = chat.messages;
     //const lastMessage = messages[messages.length - 1] ?? { content: "" };
-   // updatedChat.messages = lastMessage;
+    // updatedChat.messages = lastMessage;
 
     // const date = new Date(lastMessage.date);
     // const hours = date.getHours();
@@ -113,7 +120,7 @@ const chatFormater = ({ chats, user }: Props) => {
       ...updatedChat,
       messages: updatedChat.messages,
       participants: updatedChat.participants,
-     // time: time,
+      // time: time,
     };
 
     return updatedChat2;

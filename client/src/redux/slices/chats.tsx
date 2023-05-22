@@ -12,10 +12,9 @@ const initialState = {
     messages: [] as any,
     lastMessage: {},
     id: "" as string | null,
+    chatUserStatus: false as any,
   },
 };
-
-
 
 //Actions
 export const getCurrentChat = createAsyncThunk(
@@ -53,7 +52,7 @@ export const newChat = createAsyncThunk(
       });
 
       if (chat) {
-      //  return rejectWithValue("Ya existe un chat con este usuario");
+        //  return rejectWithValue("Ya existe un chat con este usuario");
       }
 
       const res = await axios.post(`${urlServer}api/chat/`, {
@@ -112,6 +111,7 @@ const postsSlice = createSlice({
       if (index !== -1) {
         console.log("index act", index);
         state.chats[index].lastMessage = action.payload.newMessage;
+        state.chats[index].lastModified = new Date(Date.now()).toISOString();
       }
 
       state.currentChat.messages = [
@@ -119,14 +119,30 @@ const postsSlice = createSlice({
         action.payload.newMessage,
       ];
       state.currentChat.lastMessage = action.payload.newMessage;
+
+      state.chats = state.chats.sort((a:any, b:any) => {
+        const dateA: any = new Date(a.lastModified);
+        const dateB: any = new Date(b.lastModified);
+
+        // Compara las fechas y devuelve el resultado de la comparación
+        // para determinar el orden en el que se deben colocar los elementos
+        return dateB - dateA;
+      });
     },
     resetChatId(state) {
       state.currentChat.id = null;
     },
+    chatUserStatus(state, action: PayloadAction<any>) {
+      state.currentChat.chatUserStatus = action.payload.status;
+      toast(`Tu amigo ${action.payload.status ? "esta conectado" : "esta desconectado"}`);
+    } 
   },
   extraReducers: (builder) => {
     builder
       .addCase(getCurrentChat.fulfilled, (state, action) => {
+
+ 
+
         state.currentChat.messages = action.payload.messages;
         state.currentChat.id = action.payload.id;
       })
@@ -154,7 +170,7 @@ const postsSlice = createSlice({
   },
 });
 
-export const { setChats, setCurrentChat, resetChatId } = postsSlice.actions;
+export const { setChats, setCurrentChat, resetChatId, chatUserStatus } = postsSlice.actions;
 
 export default postsSlice.reducer;
 
