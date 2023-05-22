@@ -96,6 +96,11 @@ const MessageSchema = new mongoose.Schema({
     ref: "Chat",
     required: true,
   },
+  type: {
+    type: String,
+    enum: ["text", "image", "video", "audio", "file"],
+    default: "text",
+  },
 });
 
 const ChatSchema = new mongoose.Schema({

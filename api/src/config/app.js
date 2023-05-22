@@ -5,14 +5,16 @@ const http = require("http");
 const cors = require("cors");
 const router = require("../routes/index.js");
 require("dotenv").config();
+const cloudinary = require('cloudinary').v2;
 const socketSetup = require("./socket.js");
-
+const multer = require("multer");
 const app = express();
 const server = http.createServer(app);
 
 app.use(express.json());
 app.use(cors());
 app.use(morgan("dev"));
+
 
 socketSetup.attach(server);
 

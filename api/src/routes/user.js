@@ -205,6 +205,7 @@ router.get("/:id", async (req, res) => {
       const lastMessage = {
         ...chat.lastMessage.toJSON(),
         time: formatMessageTime(chat.lastMessage),
+        content: chat.lastMessage.type === "text" ? chat.lastMessage.content : "Archivo",
       };
 
       return {

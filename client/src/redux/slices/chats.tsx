@@ -10,7 +10,6 @@ const initialState = {
   chats: [] as any,
   currentChat: {
     messages: [] as any,
-    lastMessage: {},
     id: "" as string | null,
     chatUserStatus: false as any,
   },
@@ -99,50 +98,59 @@ const postsSlice = createSlice({
       state.chats = action.payload;
     },
     setCurrentChat(state, action: PayloadAction<any>) {
-      console.log("action.payload.newMessage", action.payload);
-
       //buscamos el index del chat en el array de chats
+      console.log("action.payload.newMessage", action.payload.newMessage);
+      
       const index: any = state.chats.findIndex((chat: any) => {
         return chat._id === action.payload.chatId;
       });
 
       //si existe actualizamos el lastMessage
       console.log("index", index);
+      
       if (index !== -1) {
         console.log("index act", index);
         state.chats[index].lastMessage = action.payload.newMessage;
         state.chats[index].lastModified = new Date(Date.now()).toISOString();
+
+        if (action.payload.newMessage.type !== "text") {
+          console.log("es archivo");
+          state.chats[index].lastMessage = {
+            ...state.chats[index].lastMessage,
+            content: "Archivo",
+          };
+        } else {
+          state.chats[index].lastMessage = action.payload.newMessage;
+        }
+
+        state.chats = state.chats.sort((a: any, b: any) => {
+          const dateA: any = new Date(a.lastModified);
+          const dateB: any = new Date(b.lastModified);
+          return dateB - dateA;
+        });
       }
 
+      
       state.currentChat.messages = [
         ...state.currentChat.messages,
         action.payload.newMessage,
       ];
-      state.currentChat.lastMessage = action.payload.newMessage;
-
-      state.chats = state.chats.sort((a:any, b:any) => {
-        const dateA: any = new Date(a.lastModified);
-        const dateB: any = new Date(b.lastModified);
-
-        // Compara las fechas y devuelve el resultado de la comparación
-        // para determinar el orden en el que se deben colocar los elementos
-        return dateB - dateA;
-      });
     },
     resetChatId(state) {
       state.currentChat.id = null;
     },
     chatUserStatus(state, action: PayloadAction<any>) {
       state.currentChat.chatUserStatus = action.payload.status;
-      toast(`Tu amigo ${action.payload.status ? "esta conectado" : "esta desconectado"}`);
-    } 
+      toast(
+        `Tu amigo ${
+          action.payload.status ? "esta conectado" : "esta desconectado"
+        }`
+      );
+    },
   },
   extraReducers: (builder) => {
     builder
       .addCase(getCurrentChat.fulfilled, (state, action) => {
-
- 
-
         state.currentChat.messages = action.payload.messages;
         state.currentChat.id = action.payload.id;
       })
@@ -170,7 +178,8 @@ const postsSlice = createSlice({
   },
 });
 
-export const { setChats, setCurrentChat, resetChatId, chatUserStatus } = postsSlice.actions;
+export const { setChats, setCurrentChat, resetChatId, chatUserStatus } =
+  postsSlice.actions;
 
 export default postsSlice.reducer;
 

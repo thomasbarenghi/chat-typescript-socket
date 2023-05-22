@@ -6,6 +6,19 @@ const User = require("../models/nosql/user");
 const mongoose = require("mongoose");
 const moment = require("moment");
 const { CLIENT_URL } = process.env;
+const fs = require("fs");
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+const uuid = require("uuid").v4;
+const { exec } = require("child_process");
+const { CLOUD_NAME, CLOUD_API_KEY, CLOUD_API_SECRET } = process.env;
+const path = require("path");
+
+cloudinary.config({
+  cloud_name: CLOUD_NAME,
+  api_key: CLOUD_API_KEY,
+  api_secret: CLOUD_API_SECRET,
+});
 
 const io = new Server({
   cors: {
@@ -46,8 +59,10 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("message", async (message) => {
-    console.log("nuevo mensaje:", message);
     try {
+
+      const imageUrl = await uploadImage(message);
+console.log("imageUrl", imageUrl)
       const chat = await Chat.findById(message.chatId);
       if (!chat) {
         return socket.emit("chatError", "El chat no existe");
@@ -55,9 +70,10 @@ io.on("connection", async (socket) => {
 
       let newMessage = new Message({
         sender: message.user,
-        content: message.msg,
+        content: message.msg || imageUrl,
         timestamp: Date.now(),
         chatId: message.chatId,
+        type: imageUrl ? "image" : "text",
       });
 
       // Guardar el mensaje en la base de datos
@@ -125,6 +141,50 @@ io.on("connection", async (socket) => {
     // console.log("onlineStatus", socket.onlineStatus, socket.clientIdMaster);
   });
 });
+
+async function uploadImage(message) {
+
+  if (message.image) {
+    try {
+      console.log(CLOUD_API_SECRET, CLOUD_API_KEY, CLOUD_NAME)
+      const image = Buffer.from(message.image, "base64");
+
+      const filename =
+        "nombres_graciosos_para_perros_pequenos_23298_3_600.jpg"; // Nombre del archivo
+      const filePath = path.join(__dirname, "..", "uploads", filename);
+
+      fs.writeFile(filePath, image, (err) => {
+        if (err) {
+          throw err;
+        }
+        console.log("¡El archivo se ha guardado en:", filePath, "!");
+      });
+
+      const result = await cloudinary.uploader.upload(filePath, {
+        folder: "uploads",
+      });
+
+      const imageUrl = result.url;
+
+      fs.unlink(filePath, (err) => {
+        if (err) {
+          console.error(err);
+          return;
+        }
+        console.log("Archivo borrado");
+
+        
+      });
+
+      return imageUrl;
+    } catch (error) {
+      console.log("error cloud", error.message);
+    }
+  }
+  else {
+    return null;
+  }
+}
 
 function findAllSocketsByClientIdMaster(clientIdMaster) {
   const sockets = io.sockets.sockets.values();

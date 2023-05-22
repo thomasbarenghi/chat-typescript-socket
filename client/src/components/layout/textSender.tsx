@@ -6,11 +6,14 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 
 interface IMsg {
   user: string;
-  msg: string;
+  msg: string | null;
   chatId: string;
+  image: any;
 }
 
 const TextSender = () => {
+
+  const reader = new FileReader();
   const currentUser = useAppSelector(
     (state) => state.authSession.session.current._id
   );
@@ -18,27 +21,48 @@ const TextSender = () => {
 
   const sendMessage = async (e: any) => {
     e.preventDefault();
-    console.log("chatId", chatId);
-   const msg = e.target.msg.value;
+    const image = e.target.image.files[0];
+    if (image) {
+      console.log("Hay imagen seleccionada");
+      reader.onload = function () {
+        const base64 = reader.result;
+        const socket = getSocket();
 
-    if (msg) {
+        const message: IMsg = {
+          user: currentUser,
+          msg: null,
+          chatId: chatId,
+          image: image,
+        };
+        console.log("message", message);
+        socket.emit("message", message);
+
+        //quitamos la imagen del estado
+
+      };
+
+      reader.readAsDataURL(image);
+
+      // Resto del código de envío del mensaje...
+    } else {
+      console.log("No hay imagen seleccionada");
+      const msg = e.target.msg.value;
+      const socket = getSocket();
+
       const message: IMsg = {
         user: currentUser,
-        msg,
+        msg: msg,
         chatId: chatId,
+        image: null,
       };
-      console.log("message", message);
-      const socket = getSocket();
+
       socket.emit("message", message);
 
-
-    
-      //hacemos reset
-      e.target.msg.value = "";
-    } else {
-      console.log("No hay mensaje");
     }
+    //reseteamos el formulario
+    e.target.reset();
   };
+
 
   return (
     <>
@@ -52,6 +76,12 @@ const TextSender = () => {
               className="flex-grow rounded-full  py-2 text-sm font-normal text-violet-800 outline-none placeholder:text-violet-800"
               placeholder="Escribe un mensaje"
               name="msg"
+            />
+            {/* Opcion para subir una imagen */}
+            <input
+              className="flex-grow rounded-full  py-2 text-sm font-normal text-violet-800 outline-none placeholder:text-violet-800"
+              type="file"
+              name="image"
             />
             <button className=" text-sm font-semibold text-violet-800">
               Enviar
