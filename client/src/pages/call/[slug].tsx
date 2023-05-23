@@ -13,6 +13,10 @@ const CallRoom = () => {
     (state) => state.authSession.session.current
   );
 
+  const [Peer, setPeer] = useState<any>(null);
+  const [myPeerId, setMyPeerId] = useState<string>("");
+  const [otherPeerId, setOtherPeerId] = useState<string>("");
+
   const [peerId, setPeerId] = useState<string>("");
   const [messages, setMessages] = useState<any[]>([]);
   const localVideoRef = useRef<any>(null);
@@ -48,103 +52,117 @@ const CallRoom = () => {
     console.log("useEffect", socket);
   }, [socket]);
 
+  //Inicializar app
   useEffect(() => {
-    console.log("useffect");
-    const initCall = async () => {
-      console.log("initCall xxx");
-      if (socket && process.browser && navigator.mediaDevices) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: true,
-          });
-          localVideoRef.current.srcObject = stream;
+    //Obtenemos medios
+    const getMedia = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: true,
+        });
 
-          if (owner === "true") {
-            console.log("owner");
-            import("peerjs").then(({ default: Peer }) => {
-              const peer = new Peer({
-                host: "127.0.0.1", // El hostname del servidor backend
-                port: 9000, // El puerto del servidor backend
-                path: "/app", // Ruta al servidor PeerJS en tu backend
-              });
-
-              if (peer) {
-                console.log("peer ok", peer);
-                peer.on("open", (id) => {
-                  console.log("My peer ID is: " + id);
-                });
-
-                peer.on("connection", (conn) => {
-                  conn.on("open", () => {
-                    socket.on("receivePeerId", (data) => {
-                      var call = peer.call(data.peerId, stream);
-                      console.log("call out", peer, peer.id, data.peerId);
-                      call?.on("stream", (stream) => {
-                        console.log("call stream", stream);
-                        remoteVideoRef.current.srcObject = stream;
-                      });
-                    });
-                  });
-                });
-
-                return () => {
-                  socket.off("receivePeerId");
-                };
-              }
-            });
-          } else {
-            import("peerjs").then(({ default: Peer }) => {
-              const peer = new Peer({
-                host: "127.0.0.1", // El hostname del servidor backend
-                port: 9000, // El puerto del servidor backend
-                path: "/app", // Ruta al servidor PeerJS en tu backend
-              });
-
-              console.log("peer out", peer);
-
-              peer.on("open", (id) => {
-                console.log("sendPeerId", id);
-
-                socket.emit("sendPeerId", {
-                  callId,
-                  peerId: id,
-                });
-              });
-
-              peer.on("call", (call) => {
-                console.log("nowCalling", call);
-                call.answer(stream);
-                call.on("stream", (stream) => {
-                  remoteVideoRef.current.srcObject = stream;
-                });
-              });
-            });
-          }
-        } catch (error) {
-          console.log(error);
-        }
+        localVideoRef.current.srcObject = stream;
+      } catch (err) {
+        console.error("error local media", err);
       }
     };
-    console.log("initCall");
 
-    if (socket) {
-      initCall();
+    if (owner === "true" && socket) {
+      socket!.on("receivePeerId", (data) => {
+        console.log("receivePeerId", data);
+        setOtherPeerId(data.peerId);
+      });
     }
+
+    getMedia();
+
+    return () => {
+      socket!.off("receivePeerId");
+    };
+  }, [socket]);
+
+  //Conectar a peerjs y quedar a la escucha de llamadas
+  useEffect(() => {
+    const connectToPeer = async () => {
+      import("peerjs").then(({ default: Peer }) => {
+        const peer = new Peer({
+          host: "localhost",
+          port: 3002,
+          path: "/peerjs/myapp",
+        });
+
+        peer.on("open", (id) => {
+          console.log("My peer ID is: " + id);
+          setMyPeerId(id);
+          setPeer(peer);
+
+          if (owner === "false") {
+            socket!.emit("sendPeerId", {
+              callId,
+              peerId: id,
+            });
+          }
+        });
+
+        peer.on("error", (error) => {
+          console.error(error);
+        });
+
+        peer.on("connection", (conn) => {
+          console.log("connection", conn);
+          conn.on("data", (data) => {
+            console.log("received", data);
+          });
+          conn.on("open", () => {
+            conn.send("hello!");
+          });
+        });
+
+        peer.on("call", (call) => {
+          call.answer(localVideoRef.current.srcObject);
+          call.on("stream", (remoteStream) => {
+            remoteVideoRef.current.srcObject = remoteStream;
+          });
+        });
+      });
+    };
+    connectToPeer();
   }, []);
+
+  //Llamar a otro peer
+  useEffect(() => {
+    if (Peer) {
+      const makeCall = async () => {
+        let conn = Peer.connect(otherPeerId);
+        conn.on("data", (data: any) => {
+          console.log("received", data);
+        });
+        conn.on("open", () => {
+          conn.send("hi!");
+        });
+
+        let call = Peer.call(otherPeerId, localVideoRef.current.srcObject);
+        call.on("stream", (remoteStream: any) => {
+          remoteVideoRef.current.srcObject = remoteStream;
+        });
+      };
+
+      if (owner === "true" && otherPeerId !== "") {
+        makeCall();
+      }
+    }
+  }, [Peer, otherPeerId]);
 
   const sendMessage = (e: any) => {
     e.preventDefault();
-
-    if (!socket) {
-      return;
+    if (socket) {
+      socket?.emit("tempMessage", {
+        callID: callId,
+        message: e.target.msj.value,
+        user: currentUser._id,
+      });
     }
-
-    socket?.emit("tempMessage", {
-      callID: callId,
-      message: e.target.msj.value,
-      user: currentUser._id,
-    });
   };
 
   return (
@@ -211,3 +229,88 @@ const CallRoom = () => {
 };
 
 export default CallRoom;
+
+// useEffect(() => {
+//   console.log("useffect");
+//   const initCall = async () => {
+//     console.log("initCall xxx");
+//     if (socket && process.browser && navigator.mediaDevices) {
+//       try {
+//         const stream = await navigator.mediaDevices.getUserMedia({
+//           audio: true,
+//           video: true,
+//         });
+//         localVideoRef.current.srcObject = stream;
+
+//         if (owner === "true") {
+//           console.log("owner");
+//           import("peerjs").then(({ default: Peer }) => {
+//             const peer = new Peer({
+//               host: "127.0.0.1", // El hostname del servidor backend
+//               port: 9000, // El puerto del servidor backend
+//               path: "/app", // Ruta al servidor PeerJS en tu backend
+//             });
+
+//             if (peer) {
+//               console.log("peer ok", peer);
+//               peer.on("open", (id) => {
+//                 console.log("My peer ID is: " + id);
+//               });
+
+//               peer.on("connection", (conn) => {
+//                 conn.on("open", () => {
+//                   socket.on("receivePeerId", (data) => {
+//                     var call = peer.call(data.peerId, stream);
+//                     console.log("call out", peer, peer.id, data.peerId);
+//                     call?.on("stream", (stream) => {
+//                       console.log("call stream", stream);
+//                       remoteVideoRef.current.srcObject = stream;
+//                     });
+//                   });
+//                 });
+//               });
+
+//               return () => {
+//                 socket.off("receivePeerId");
+//               };
+//             }
+//           });
+//         } else {
+//           import("peerjs").then(({ default: Peer }) => {
+//             const peer = new Peer({
+//               host: "127.0.0.1", // El hostname del servidor backend
+//               port: 9000, // El puerto del servidor backend
+//               path: "/app", // Ruta al servidor PeerJS en tu backend
+//             });
+
+//             console.log("peer out", peer);
+
+//             peer.on("open", (id) => {
+//               console.log("sendPeerId", id);
+
+//               socket.emit("sendPeerId", {
+//                 callId,
+//                 peerId: id,
+//               });
+//             });
+
+//             peer.on("call", (call) => {
+//               console.log("nowCalling", call);
+//               call.answer(stream);
+//               call.on("stream", (stream) => {
+//                 remoteVideoRef.current.srcObject = stream;
+//               });
+//             });
+//           });
+//         }
+//       } catch (error) {
+//         console.log(error);
+//       }
+//     }
+//   };
+//   console.log("initCall");
+
+//   if (socket) {
+//     initCall();
+//   }
+// }, []);
