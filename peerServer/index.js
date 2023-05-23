@@ -1,41 +1,26 @@
-// const {server} = require("./config/app.js");
-// const { dbConnect } = require("./config/mongo");
-
-// server.listen(3001, () => {
-//   console.log(`Servidor iniciado en el puerto 3001`);
-// });
-
-// dbConnect();
-
 const express = require("express");
-const http = require("http");
-const { ExpressPeerServer, PeerServer } = require("peer");
-const socketConfig = require("./socket");
-const cors = require("cors");
+
+const { ExpressPeerServer } = require("peer");
 
 const app = express();
-const server = http.createServer(app);
-socketConfig.attach(server);
+
 // make all the files in 'public' available
 // https://expressjs.com/en/starter/static-files.html
 app.use(express.static("public"));
-app.use(cors({
-  origin: "*"
-}));
-
 
 // https://expressjs.com/en/starter/basic-routing.html
 app.get("/", (request, response) => {
   response.sendFile(__dirname + "/views/index.html");
 });
 
-const listener = server.listen(3001, () => {
+// listen for requests :)
+const listener = app.listen(3002, () => {
   console.log("Your app is listening on port " + listener.address().port);
 });
 
 // peerjs server
-const peerServer = PeerServer({
-  port: 9000,
+const peerServer = ExpressPeerServer(listener, {
+  debug: true,
   path: "/myapp",
 });
 
@@ -50,5 +35,3 @@ peerServer.on("error", (client) => {
 });
 
 app.use("/peerjs", peerServer);
-
-// listen for requests :)

@@ -4,7 +4,7 @@ import { io, Socket } from "socket.io-client";
 
 //let socket: Socket;
 
-const urlServer = "http://localhost:3001/"
+const urlServer = "https://chat-typescript-socket.onrender.com/"
 
 let socket= null;
 
