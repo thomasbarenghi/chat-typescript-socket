@@ -1,55 +1,58 @@
 import { useRouter } from "next/router";
 import { useEffect, useRef, useState, useMemo, use } from "react";
-import { getSocket, initSocket } from "@/utils/socket";
+import { getSocket } from "@/utils/socket";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { debounce } from "lodash";
-import { Stream } from "stream";
 
 const CallRoom = () => {
   const router = useRouter();
-  const { slug: callId, owner } = router.query;
   const socket = getSocket();
   const dispatch = useAppDispatch();
+  const { slug: callId, owner } = router.query;
   const currentUser = useAppSelector(
     (state) => state.authSession.session.current
   );
 
+  const [peerId, setPeerId] = useState<string>("");
   const [messages, setMessages] = useState<any[]>([]);
-
-  //typescript
   const localVideoRef = useRef<any>(null);
   const remoteVideoRef = useRef<any>(null);
 
-  const delayedFetchGenres = useMemo(() => {
-    return debounce(async () => {
-      await initSocket(currentUser._id);
-    }, 300);
-  }, [dispatch]);
-
   useEffect(() => {
-    const connectSocket = async () => {
-      try {
-        const cancelDebounce = () => {
-          delayedFetchGenres.cancel();
-        };
-        delayedFetchGenres();
-        return cancelDebounce;
-      } catch (error) {
-        console.error("Error al conectar el socket:", error);
-      }
+    const listenSocket = async () => {
+      socket?.emit(
+        "acceptCall",
+        {
+          callID: callId,
+        },
+        (data: any) => {
+          console.log("callback", data);
+        }
+      );
+
+      socket?.on("newTempMessage", (message: any) => {
+        console.log("newTempMessage", message);
+        setMessages((prev) => [...prev, message]);
+      });
+
+      return () => {
+        socket?.off("acceptCall");
+        socket?.off("newTempMessage");
+      };
     };
-    connectSocket();
-  }, [delayedFetchGenres]);
 
-  const [peerId, setPeerId] = useState<string>("");
+    if (socket && socket.connected && socket !== null) {
+      listenSocket();
+    }
+
+    console.log("useEffect", socket);
+  }, [socket]);
 
   useEffect(() => {
+    console.log("useffect");
     const initCall = async () => {
+      console.log("initCall xxx");
       if (socket && process.browser && navigator.mediaDevices) {
-        socket.emit("acceptCall", {
-          callId,
-        });
-
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             audio: true,
@@ -58,56 +61,59 @@ const CallRoom = () => {
           localVideoRef.current.srcObject = stream;
 
           if (owner === "true") {
+            console.log("owner");
             import("peerjs").then(({ default: Peer }) => {
               const peer = new Peer({
-                host: "localhost", // El hostname del servidor backend
-                port: 3001, // El puerto del servidor backend
-                path: "/peerjs", // Ruta al servidor PeerJS en tu backend
+                host: "127.0.0.1", // El hostname del servidor backend
+                port: 9000, // El puerto del servidor backend
+                path: "/app", // Ruta al servidor PeerJS en tu backend
               });
 
-              peer.on("open", (id) => {
-                console.log("My peer ID is: " + id);
-                setPeerId(id);
-              });
+              if (peer) {
+                console.log("peer ok", peer);
+                peer.on("open", (id) => {
+                  console.log("My peer ID is: " + id);
+                });
 
-              peer.on("connection", (conn) => {
-                conn.on("open", () => {
-                  conn.on("data", (data) => {
-                    console.log("Recibido:", data);
+                peer.on("connection", (conn) => {
+                  conn.on("open", () => {
+                    socket.on("receivePeerId", (data) => {
+                      var call = peer.call(data.peerId, stream);
+                      console.log("call out", peer, peer.id, data.peerId);
+                      call?.on("stream", (stream) => {
+                        console.log("call stream", stream);
+                        remoteVideoRef.current.srcObject = stream;
+                      });
+                    });
                   });
-                  conn.send("¡Hola!");
                 });
-              });
 
-              socket.on("receivePeerId", (data: any) => {
-                var call = peer.call(data.peerID, stream);
-
-                call.on("stream", (stream) => {
-                  remoteVideoRef.current.srcObject = stream;
-                });
-              });
+                return () => {
+                  socket.off("receivePeerId");
+                };
+              }
             });
           } else {
             import("peerjs").then(({ default: Peer }) => {
               const peer = new Peer({
-                host: "localhost", // El hostname del servidor backend
-                port: 3001, // El puerto del servidor backend
-                path: "/peerjs", // Ruta al servidor PeerJS en tu backend
+                host: "127.0.0.1", // El hostname del servidor backend
+                port: 9000, // El puerto del servidor backend
+                path: "/app", // Ruta al servidor PeerJS en tu backend
               });
+
+              console.log("peer out", peer);
 
               peer.on("open", (id) => {
-                console.log("My peer ID is: " + id);
-                setPeerId(id);
-              });
+                console.log("sendPeerId", id);
 
-              if (peerId && callId) {
                 socket.emit("sendPeerId", {
                   callId,
-                  peerId,
+                  peerId: id,
                 });
-              }
+              });
 
               peer.on("call", (call) => {
+                console.log("nowCalling", call);
                 call.answer(stream);
                 call.on("stream", (stream) => {
                   remoteVideoRef.current.srcObject = stream;
@@ -120,36 +126,30 @@ const CallRoom = () => {
         }
       }
     };
+    console.log("initCall");
 
-    initCall();
-  }, [socket, process.browser, owner, callId, peerId]);
-
-  useEffect(() => {
-    if (socket && process.browser) {
-      socket.on("newTempMessage", (message: any) => {
-        console.log("newTempMessage", message);
-        setMessages((messages) => [...messages, message]);
-      });
-
-      return () => {
-        socket.off("newTempMessage");
-      };
+    if (socket) {
+      initCall();
     }
-  }, [socket]);
+  }, []);
 
   const sendMessage = (e: any) => {
     e.preventDefault();
-    socket.emit("tempMessage", {
+
+    if (!socket) {
+      return;
+    }
+
+    socket?.emit("tempMessage", {
       callID: callId,
       message: e.target.msj.value,
-      user: currentUser.email,
+      user: currentUser._id,
     });
   };
 
   return (
     <div className="grid h-screen grid-cols-[60%,auto]">
       <div className="h-full bg-white">
-        {/* Elemento de video para mostrar el stream local */}
         <video
           id="local-video"
           ref={localVideoRef}
@@ -180,8 +180,6 @@ const CallRoom = () => {
             Activar/Desactivar audio
           </button>
         </div>
-
-        {/* Elemento de video para mostrar el stream remoto */}
         <video
           id="remote-video"
           ref={remoteVideoRef}

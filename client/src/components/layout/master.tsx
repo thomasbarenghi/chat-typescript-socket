@@ -28,29 +28,6 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
     (state: RootState) => state?.authSession.session.current
   );
 
-  const delayedFetchGenres = useMemo(() => {
-    return debounce(async () => {
-      await initSocket(session._id);
-    }, 300);
-  }, [dispatch]);
-
-  console.log("socket", socket);
-
-  useEffect(() => {
-    const connectSocket = async () => {
-      try {
-        const cancelDebounce = () => {
-          delayedFetchGenres.cancel();
-        };
-        delayedFetchGenres();
-        return cancelDebounce;
-      } catch (error) {
-        console.error("Error al conectar el socket:", error);
-      }
-    };
-    connectSocket();
-  }, [delayedFetchGenres]);
-
   useEffect(() => {
     if (socket) {
       console.log("new chat escuchando");
@@ -68,9 +45,15 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
         //hacemos un alert preguntando si quiere aceptar la llamada
         const acceptCall = confirm(`¿Quieres aceptar la llamada?`);
         if (acceptCall) {
-          socket.emit("acceptCall", {
-            callID: data.callID,
-          });
+          socket.emit(
+            "acceptCall",
+            {
+              callID: data.callID,
+            },
+            (data: any) => {
+              console.log("callback", data);
+            }
+          );
           router.push(`/call/${data.callID}?owner=false`);
         }
       });

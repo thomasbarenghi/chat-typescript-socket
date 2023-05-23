@@ -4,7 +4,7 @@ import { RootState } from "@/redux/store/store";
 import { toast } from "sonner";
 import { toastError, toastWarning, toastSuccess } from "@/utils/toastStyles";
 const urlServer = process.env.NEXT_PUBLIC_SERVER_URL;
-import { getSocket, initSocket } from "@/utils/socket";
+import { getSocket } from "@/utils/socket";
 
 const initialState = {
   chats: [] as any,
@@ -63,7 +63,7 @@ export const newChat = createAsyncThunk(
       dispatch(getChats());
       const socket = getSocket();
       console.log("socket:", id);
-      socket.emit("newChat", {
+      socket?.emit("newChat", {
         toUserId: id,
         chatId: res.data._id,
       });

@@ -3,7 +3,7 @@ import Image from "next/image";
 import { getCurrentChat, setCurrentChatOtherUser } from "../../redux/slices/chats";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { useState, useEffect } from "react";
-import { getSocket, initSocket } from "@/utils/socket";
+import { getSocket } from "@/utils/socket";
 
 const SidebarChat = () => {
   const dispatch = useAppDispatch();

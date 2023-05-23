@@ -1,12 +1,3 @@
-// const {server} = require("./config/app.js");
-// const { dbConnect } = require("./config/mongo");
-
-// server.listen(3001, () => {
-//   console.log(`Servidor iniciado en el puerto 3001`);
-// });
-
-// dbConnect();
-
 const express = require("express");
 const http = require("http");
 const { ExpressPeerServer, PeerServer } = require("peer");
@@ -30,7 +21,7 @@ const listener = server.listen(3001, () => {
 
 // peerjs server
 const peerServer = PeerServer({
-  port: 9000,
+    port: 9000,
   path: "/myapp",
 });
 

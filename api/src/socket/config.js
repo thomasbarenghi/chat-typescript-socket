@@ -3,7 +3,6 @@ const { Server } = require("socket.io");
 const { selectChat } = require("./handlers/selectChat.handler");
 const { sendMessage } = require("./handlers/message.handler");
 const uuid = require("uuid").v4;
-const { peerServer } = require("../config/app.js");
 
 const io = new Server({
   cors: {
@@ -15,6 +14,7 @@ const io = new Server({
 io.on("connection", async (socket) => {
   const userId = socket.handshake.query.userId;
   socket.clientIdMaster = userId;
+  console.log("Conectado", userId);
 
   if (userId && typeof userId === "string") {
     socket.join(userId);
@@ -44,7 +44,7 @@ io.on("connection", async (socket) => {
 
   socket.on("callUser", (data, callback) => {
     const { fromUserID, toUserID } = data;
-  const callId = uuid();
+    const callId = uuid();
     socket.join(callId);
     callback(callId);
     io.to(toUserID).emit("comingCall", {
@@ -53,24 +53,24 @@ io.on("connection", async (socket) => {
     });
   });
 
-  socket.on("acceptCall", (data) => {
+  socket.on("acceptCall", (data, callback) => {
     const { callID } = data;
     socket.join(callID);
     console.log("Llamada aceptada");
+    callback("Llamada aceptada");
   });
 
   socket.on("sendPeerId", (data) => {
-    const { callID, peerID } = data;
-    
-    io.to(callID).emit("receivePeerId", {
-      peerID,
+    const { callId, peerId } = data;
+    console.log("sendPeerId", peerId, callId);
+    io.to(callId).emit("receivePeerId", {
+      peerId,
     });
   });
-    
 
   socket.on("tempMessage", (data) => {
     const { callID, message, user } = data;
-    console.log("Mensaje temporal", message, callID);
+    console.log("tempMessage", message, user);
     const newMessage = {
       message,
       user,

@@ -4,4 +4,4 @@ export { default as MasterLayout } from "./layout/master";
 export { default as SidebarChat } from "./layout/sidebarChat";
 export { default as TextSender } from "./layout/textSender";
 export { default as ChatContainer } from "./layout/chatContainer";
-
+export { default as Master } from "./masters/master";
