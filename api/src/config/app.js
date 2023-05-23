@@ -21,4 +21,4 @@ socketSetup.attach(server);
 app.use("/peerjs", peerServer);
 app.use("/api", router);
 
-module.exports = server;
+module.exports = { server, peerServer };

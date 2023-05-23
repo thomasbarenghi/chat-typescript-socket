@@ -3,17 +3,24 @@ import { SidebarChat, TextSender, ChatContainer } from "@/components";
 import Image from "next/image";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store/store";
-import { resetChatId, newChat, getChats, chatUserStatus } from "@/redux/slices/chats";
+import {
+  resetChatId,
+  newChat,
+  getChats,
+  chatUserStatus,
+} from "@/redux/slices/chats";
 import { useAppDispatch } from "@/redux/hooks";
 import axios from "axios";
 import { getSocket, initSocket } from "@/utils/socket";
 import { debounce } from "lodash";
+import { useRouter } from "next/router";
 
 type Props = {
   children: ReactNode;
 };
 
 const MasterLayout: React.FC<Props> = ({ children }) => {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const socket = getSocket();
   const chatId = useSelector((state: RootState) => state.chats.currentChat.id);
@@ -55,6 +62,18 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
       socket.on("otherUserStatus", (data: any) => {
         dispatch(chatUserStatus(data));
       });
+
+      socket.on("comingCall", (data: any) => {
+        console.log("comingCall", data);
+        //hacemos un alert preguntando si quiere aceptar la llamada
+        const acceptCall = confirm(`¿Quieres aceptar la llamada?`);
+        if (acceptCall) {
+          socket.emit("acceptCall", {
+            callID: data.callID,
+          });
+          router.push(`/call/${data.callID}?owner=false`);
+        }
+      });
       return () => {
         socket.off("newChat");
         socket.off("otherUserStatus");
@@ -82,6 +101,7 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
                   <div className="h-[100%] ">
                     <ChatContainer />
                   </div>
+
                   <TextSender />
                 </>
               )}

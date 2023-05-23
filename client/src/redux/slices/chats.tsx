@@ -11,6 +11,7 @@ const initialState = {
   currentChat: {
     messages: [] as any,
     id: "" as string | null,
+    otherUser: {} as any,
     chatUserStatus: false as any,
   },
 };
@@ -136,6 +137,10 @@ const postsSlice = createSlice({
         action.payload.newMessage,
       ];
     },
+    setCurrentChatOtherUser(state, action: PayloadAction<any>) {
+      state.currentChat.otherUser = action.payload;
+      console.log("state.currentChat.otherUser", state.currentChat.otherUser);
+    },
     resetChatId(state) {
       state.currentChat.id = null;
     },
@@ -178,7 +183,7 @@ const postsSlice = createSlice({
   },
 });
 
-export const { setChats, setCurrentChat, resetChatId, chatUserStatus } =
+export const { setChats, setCurrentChat, resetChatId, chatUserStatus, setCurrentChatOtherUser } =
   postsSlice.actions;
 
 export default postsSlice.reducer;

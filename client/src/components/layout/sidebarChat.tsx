@@ -1,6 +1,6 @@
 import React, { ReactNode } from "react";
 import Image from "next/image";
-import { getCurrentChat } from "../../redux/slices/chats";
+import { getCurrentChat, setCurrentChatOtherUser } from "../../redux/slices/chats";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { useState, useEffect } from "react";
 import { getSocket, initSocket } from "@/utils/socket";
@@ -21,6 +21,8 @@ const SidebarChat = () => {
       chatId: e.chatId,
       otherUserId: e.otherUserId._id,
     });
+
+dispatch(setCurrentChatOtherUser(e.otherUserId));
     dispatch(getCurrentChat(e.chatId));
   };
 

@@ -21,7 +21,7 @@ const formatMessagesChatsForResponse = (messages, id) => {
     formattedChats = messages.map((chat) => {
       const formattedMessages = chat.messages.map(formatMessage);
 
-      const lastMessage = {
+      const lastMessage =  chat.lastMessage && {
         ...chat.lastMessage.toJSON(),
         time: formatMessageTime(chat.lastMessage),
       };
@@ -37,7 +37,7 @@ const formatMessagesChatsForResponse = (messages, id) => {
   } else {
     const formattedMessages = messages.messages.map(formatMessage);
 
-    const lastMessage = {
+    const lastMessage = messages.lastMessage && {
       ...messages.lastMessage.toJSON(),
       time: formatMessageTime(messages.lastMessage),
     };

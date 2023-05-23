@@ -1,36 +1,46 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { getSocket } from "@/utils/socket";
 import { setCurrentChat } from "@/redux/slices/chats";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { useRouter } from "next/router";
+import { set } from "lodash";
 
 const ChatContainer = () => {
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const currentChat = useAppSelector(
     (state) => state.chats.currentChat.messages
   );
 
+  const otherUser = useAppSelector(
+    (state) => state.chats.currentChat.otherUser
+  );
+
   const chats = useAppSelector((state) => state.chats);
-console.log("chats", chats);
+  console.log("chats", chats);
   const chatId = useAppSelector((state) => state.chats.currentChat.id);
+  const currentId = useAppSelector(
+    (state) => state.authSession.session.current._id
+  );
   const socket = getSocket();
   useEffect(() => {
-    if(socket) {
-    socket.on("newMessage", (message: any) => {
-      console.log("newMessage", message);
-      dispatch(setCurrentChat(message)); //chatId
-    });
-  
-    // console.log("newChat estamos escuchando");
-    // socket.on("newChat", () => {
-    //   console.log("newChat");
-    // });
+    if (socket) {
+      socket.on("newMessage", (message: any) => {
+        console.log("newMessage", message);
+        dispatch(setCurrentChat(message)); //chatId
+      });
 
-    return () => {
-      socket.off("newMessage");
-      // socket.off("newChat");
-    };
-  }
+      // console.log("newChat estamos escuchando");
+      // socket.on("newChat", () => {
+      //   console.log("newChat");
+      // });
+
+      return () => {
+        socket.off("newMessage");
+        // socket.off("newChat");
+      };
+    }
   }, [socket]);
 
   useEffect(() => {
@@ -39,7 +49,7 @@ console.log("chats", chats);
 
   function isURL(str: any) {
     try {
-      if(str.type === "text") return false;
+      if (str.type === "text") return false;
       new URL(str.content);
       return true;
     } catch (error) {
@@ -48,10 +58,34 @@ console.log("chats", chats);
   }
 
   console.log("currentChat", currentChat);
+  const [peerId, setPeer] = useState<any>(null);
+
+  const handleJoinCall = () => {
+    console.log("join call");
+    const otherUserID = otherUser._id;
+    const currentUserID = currentId;
+    socket.emit(
+      "callUser",
+      {
+        fromUserID: currentUserID,
+        toUserID: otherUserID,
+      },
+      (data: any) => {
+        console.log("UUID de la llamada:", data);
+        router.push(`/call/${data}?owner=true`);
+      }
+    );
+  };
 
   return (
     <>
       <div className="flex h-full max-h-[100%] w-full grid-cols-1 flex-col items-start overflow-y-scroll pb-[100px] pt-4 align-middle">
+        <button
+          className="absolute bottom-0 right-0 mb-[100px] mr-4 rounded-full bg-violet-800 p-2 "
+          onClick={handleJoinCall}
+        >
+          llamar
+        </button>
         {currentChat &&
           chatId !== "" &&
           chatId !== null &&
