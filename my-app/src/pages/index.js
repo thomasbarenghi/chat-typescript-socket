@@ -64,7 +64,7 @@ export default function Home() {
     const connectToPeer = async () => {
       import("peerjs").then(({ default: Peer }) => {
         const peer = new Peer(myId, {
-          host: "localhost",
+          host: "chat-typescript-socket.onrender.com",
           port: 9000,
           path: "/myapp",
         });

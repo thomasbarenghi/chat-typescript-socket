@@ -11,6 +11,7 @@ const express = require("express");
 const http = require("http");
 const { ExpressPeerServer, PeerServer } = require("peer");
 const socketConfig = require("./socket");
+const cors = require("cors");
 
 const app = express();
 const server = http.createServer(app);
@@ -18,6 +19,10 @@ socketConfig.attach(server);
 // make all the files in 'public' available
 // https://expressjs.com/en/starter/static-files.html
 app.use(express.static("public"));
+app.use(cors({
+  origin: "*"
+}));
+
 
 // https://expressjs.com/en/starter/basic-routing.html
 app.get("/", (request, response) => {
