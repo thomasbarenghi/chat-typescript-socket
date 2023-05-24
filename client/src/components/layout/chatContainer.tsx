@@ -1,51 +1,24 @@
-import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { getSocket } from "@/utils/socket";
-import { setCurrentChat } from "@/redux/slices/chats";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { useRouter } from "next/router";
-import { set } from "lodash";
+import { TextSender } from "@/components";
 
 const ChatContainer = () => {
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const currentChat = useAppSelector(
-    (state) => state.chats.currentChat.messages
-  );
+  const socket = getSocket();
 
-  const otherUser = useAppSelector(
-    (state) => state.chats.currentChat.otherUser
-  );
+  const {
+    currentChat,
+    currentChat: { otherUser },
+  } = useAppSelector((state) => ({
+    currentChat: state.chats.currentChat,
+    chats: state.chats,
+  }));
 
-  const chats = useAppSelector((state) => state.chats);
-  console.log("chats", chats);
-  const chatId = useAppSelector((state) => state.chats.currentChat.id);
   const currentId = useAppSelector(
     (state) => state.authSession.session.current._id
   );
-  const socket = getSocket();
-  useEffect(() => {
-    if (socket) {
-      socket.on("newMessage", (message: any) => {
-        console.log("newMessage", message);
-        dispatch(setCurrentChat(message)); //chatId
-      });
-
-      // console.log("newChat estamos escuchando");
-      // socket.on("newChat", () => {
-      //   console.log("newChat");
-      // });
-
-      return () => {
-        socket.off("newMessage");
-        // socket.off("newChat");
-      };
-    }
-  }, [socket]);
-
-  useEffect(() => {
-    console.log("test");
-  }, []);
 
   function isURL(str: any) {
     try {
@@ -57,89 +30,130 @@ const ChatContainer = () => {
     }
   }
 
-  console.log("currentChat", currentChat);
-  const [peerId, setPeer] = useState<any>(null);
-
   const handleJoinCall = () => {
-    console.log("join call");
-    const otherUserID = otherUser._id;
-    const currentUserID = currentId;
-    socket.emit(
+    const acceptCall = confirm(`¿Quieres llamar a ${otherUser.firstName}?`);
+    if (!acceptCall) return;
+    socket!.emit(
       "callUser",
       {
-        fromUserID: currentUserID,
-        toUserID: otherUserID,
+        fromUserID: currentId,
+        toUserID: otherUser._id,
       },
       (data: any) => {
-        console.log("UUID de la llamada:", data);
         router.push(`/call/${data}?owner=true`);
       }
     );
   };
 
+  console.log("currentChat", currentChat.messages);
+
   return (
     <>
-      <div className="flex h-full max-h-[100%] w-full grid-cols-1 flex-col items-start overflow-y-scroll pb-[100px] pt-4 align-middle">
-        <button
-          className="absolute bottom-0 right-0 mb-[100px] mr-4 rounded-full bg-violet-800 p-2 "
-          onClick={handleJoinCall}
+      <div className="flex h-full max-h-[100%] w-full grid-cols-1 flex-col items-start  align-middle">
+        <header
+          id="chatHeader"
+          className="flex min-h-[100px] w-full items-center justify-between bg-white"
         >
-          llamar
-        </button>
-        {currentChat &&
-          chatId !== "" &&
-          chatId !== null &&
-          currentChat.map((message: any, index: any) => {
-            const isThomas = message.origin === true;
-            return (
-              <div key={index} className="flex w-full flex-col gap-1 px-6 py-3">
-                <div
-                  className={`flex  ${
-                    isThomas
+          {
+            currentChat.id && (
+          <>
+          <div className="flex w-full items-center justify-start gap-2   ">
+            <Image
+              src={currentChat.otherUser.image}
+              alt="logo"
+              width={65}
+              height={65}
+              className="aspect-square rounded-full border border-violet-800 object-cover p-1"
+            />
+            <div className="relative flex w-full flex-col gap-0">
+              <p className="text-base font-medium">
+                {currentChat.otherUser.firstName +
+                  " " +
+                  currentChat.otherUser.lastName}
+              </p>
+              <p className="text-sm font-light text-violet-800">
+                {currentChat.chatUserStatus ? "Conectado" : "Desconectado"}
+              </p>
+            </div>
+          </div>
+          <div className="flex min-w-max  gap-3 ">
+            <Image
+              src="/icon/phone.svg"
+              alt="logo"
+              width={24}
+              height={24}
+              className="aspect-square cursor-pointer"
+              onClick={handleJoinCall}
+            />
+            <Image
+              src="/icon/camera.svg"
+              alt="logo"
+              width={24}
+              height={24}
+              className="aspect-square cursor-pointer"
+              onClick={handleJoinCall}
+            />
+          </div>
+          </>
+          )}
+        </header>
+        <div className="flex h-full w-full flex-col justify-end overflow-hidden rounded-[20px] bg-violet-50">
+          {currentChat.id && (
+            <>
+              <div
+                id="chatBox"
+                className="flex w-full flex-col overflow-scroll "
+              >
+                {currentChat.messages &&
+                  currentChat.messages.map((message: any, index: any) => {
+                    const isOwned = message.origin === true;
+                    const isOwnedClass = isOwned
                       ? "flex-row-reverse justify-start"
-                      : "flex-row  justify-start"
-                  } h-max w-full items-center gap-2 `}
-                >
-                  <Image
-                    src={message.sender.image}
-                    alt="perfil"
-                    width={55}
-                    height={55}
-                    className="aspect-square rounded-full bg-white object-cover p-[2px]"
-                  />
-                  {
-                    //verificamos si es una url
-                    isURL(message) ? (
-                      <Image
-                        src={message.content}
-                        alt="imagen"
-                        width={250}
-                        height={250}
-                        className="aspect-square rounded-[30px] bg-white object-cover p-2"
-                      />
-                    ) : (
-                      <p
-                        className={`bg-white p-4 text-sm font-normal text-violet-800 ${
-                          isThomas ? "rounded-3xl" : "rounded-3xl"
-                        } max-w-[75%] `}
+                      : "flex-row  justify-start";
+                    return (
+                      <div
+                        key={index}
+                        className="flex w-full flex-col gap-1 px-6 py-3 "
                       >
-                        {message.content}
-                      </p>
-                    )
-                  }
-                </div>
-                <div
-                  className={`flex  ${
-                    isThomas
-                      ? "flex-row-reverse justify-start"
-                      : "flex-row  justify-start"
-                  } h-max w-full items-center px-[70px] `}
-                >
-                  <p className="text-xs text-violet-400">{message.time}</p>
-                </div>
+                        <div
+                          className={`flex  ${isOwnedClass} h-max w-full items-center gap-2 `}
+                        >
+                          <Image
+                            src={message.sender.image}
+                            alt="perfil"
+                            width={55}
+                            height={55}
+                            className="aspect-square rounded-full bg-white object-cover p-[2px]"
+                          />
+                          {isURL(message) ? (
+                            <Image
+                              src={message.content}
+                              alt="imagen"
+                              width={250}
+                              height={250}
+                              className="aspect-square rounded-[30px] bg-white object-cover p-2"
+                            />
+                          ) : (
+                            <p className="max-w-[75%] rounded-3xl bg-white p-4 text-sm font-normal text-violet-800 ">
+                              {message.content}
+                            </p>
+                          )}
+                        </div>
+                        <div
+                          className={`flex  ${isOwnedClass} h-max w-full items-center px-[70px] `}
+                        >
+                          <p className="text-xs text-violet-400">
+                            {message.time}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
-            );
-          })}
+              <TextSender />
+            </>
+          )}
+        </div>
       </div>
     </>
   );

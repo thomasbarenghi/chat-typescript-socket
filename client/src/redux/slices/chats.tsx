@@ -3,6 +3,7 @@ import axios from "axios";
 import { RootState } from "@/redux/store/store";
 import { toast } from "sonner";
 import { toastError, toastWarning, toastSuccess } from "@/utils/toastStyles";
+import { chatsFormater } from "@/utils/chats/chatsFormater";
 const urlServer = process.env.NEXT_PUBLIC_SERVER_URL;
 import { getSocket } from "@/utils/socket";
 
@@ -83,12 +84,16 @@ export const getChats = createAsyncThunk(
       const user = state.authSession.session.current;
       const res = await axios.get(`${urlServer}api/user/${user._id}/chats`);
       console.log("res.data", res.data);
-      return res.data;
+      const chats = chatsFormater({ chats: res.data, user });
+      return chats;
     } catch (error: any) {
       return rejectWithValue(error);
     }
   }
 );
+
+
+
 
 //Reducers
 const postsSlice = createSlice({
@@ -175,6 +180,9 @@ const postsSlice = createSlice({
       })
 
       .addCase(getChats.fulfilled, (state, action) => {
+
+        
+
         state.chats = action.payload;
       })
       .addCase(getChats.rejected, (state, action) => {
@@ -182,6 +190,8 @@ const postsSlice = createSlice({
       });
   },
 });
+
+
 
 export const { setChats, setCurrentChat, resetChatId, chatUserStatus, setCurrentChatOtherUser } =
   postsSlice.actions;

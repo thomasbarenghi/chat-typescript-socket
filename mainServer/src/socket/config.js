@@ -47,16 +47,19 @@ io.on("connection", async (socket) => {
     const callId = uuid();
     socket.join(callId);
     callback(callId);
+
+    setTimeout(() => {
     io.to(toUserID).emit("comingCall", {
       callID: callId,
       fromUserID,
     });
+    }, 5000);
   });
 
   socket.on("acceptCall", (data, callback) => {
     const { callID } = data;
     socket.join(callID);
-    console.log("Llamada aceptada");
+    console.log("Llamada aceptada", socket, callID);
     callback("Llamada aceptada");
   });
 
@@ -68,6 +71,9 @@ io.on("connection", async (socket) => {
     });
   });
 
+  //verificar si el usuario esta conectado a la sala callId y si no esta conectado lo conectamos
+
+
   socket.on("tempMessage", (data) => {
     const { callID, message, user } = data;
     console.log("tempMessage", message, user);
@@ -75,6 +81,7 @@ io.on("connection", async (socket) => {
       message,
       user,
     };
+   
     io.to(callID).emit("newTempMessage", newMessage);
   });
 });

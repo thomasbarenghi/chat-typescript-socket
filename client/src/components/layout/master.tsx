@@ -1,18 +1,17 @@
-import React, { ReactNode, useState, useEffect, useMemo } from "react";
-import { SidebarChat, TextSender, ChatContainer } from "@/components";
+import React, { ReactNode, useState, useEffect } from "react";
+import { SidebarChat, ChatContainer, SidebarInnerChatArea } from "@/components";
 import Image from "next/image";
-import { useSelector } from "react-redux";
-import { RootState } from "@/redux/store/store";
+
 import {
   resetChatId,
   newChat,
   getChats,
   chatUserStatus,
+  setCurrentChat,
 } from "@/redux/slices/chats";
 import { useAppDispatch } from "@/redux/hooks";
 import axios from "axios";
-import { getSocket, initSocket } from "@/utils/socket";
-import { debounce } from "lodash";
+import { getSocket } from "@/utils/socket";
 import { useRouter } from "next/router";
 
 type Props = {
@@ -23,26 +22,23 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const socket = getSocket();
-  const chatId = useSelector((state: RootState) => state.chats.currentChat.id);
-  const session = useSelector(
-    (state: RootState) => state?.authSession.session.current
-  );
 
   useEffect(() => {
     if (socket) {
-      console.log("new chat escuchando");
       socket.on("newChat", () => {
-        console.log("newChat entro");
         dispatch(getChats());
       });
-      console.log("otherUserStatus escuchando");
+
       socket.on("otherUserStatus", (data: any) => {
         dispatch(chatUserStatus(data));
       });
 
+      socket.on("newMessage", (message: any) => {
+        console.log("newMessage", message);
+        dispatch(setCurrentChat(message)); //chatId
+      });
+
       socket.on("comingCall", (data: any) => {
-        console.log("comingCall", data);
-        //hacemos un alert preguntando si quiere aceptar la llamada
         const acceptCall = confirm(`¿Quieres aceptar la llamada?`);
         if (acceptCall) {
           socket.emit(
@@ -60,6 +56,8 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
       return () => {
         socket.off("newChat");
         socket.off("otherUserStatus");
+        socket.off("newMessage");
+        socket.off("comingCall");
       };
     }
   }, [socket]);
@@ -71,23 +69,17 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
   return (
     <>
       <main className="max-h-screen min-h-screen  overflow-hidden">
-        <Header session={session} />
-        <section className="relative grid h-[calc(100vh-104px)] max-h-[calc(100vh-80px)] w-screen grid-cols-[350px,auto] overflow-hidden pb-6 pr-10 ">
-          <SidebarChat />
-          <div className="relative h-full w-full">
-            <div
-              id="chatMaster"
-              className="absolute h-[calc(100vh-104px)]  w-full overflow-hidden rounded-3xl bg-violet-50 "
-            >
-              {chatId !== "" && chatId !== null && (
-                <>
-                  <div className="h-[100%] ">
-                    <ChatContainer />
-                  </div>
-
-                  <TextSender />
-                </>
-              )}
+        <section className="relative h-screen w-screen px-8 pb-8">
+          <div className="relative h-full ">
+            <div className="absolute bottom-0 right-0 top-0 grid h-full  w-full grid-cols-[350px,auto] overflow-hidden ">
+              <div className="h-full max-h-screen overflow-y-auto">
+                <SidebarChat>
+                  <SidebarInnerChatArea />
+                </SidebarChat>
+              </div>
+              <div className="h-full max-h-screen overflow-y-auto">
+                <ChatContainer />
+              </div>
             </div>
           </div>
         </section>
@@ -136,21 +128,19 @@ const Header = (session: any) => {
 const SearchUser = () => {
   const [users, setUsers] = useState([]);
   const dispatch = useAppDispatch();
+
   const searchUser = async (e: any) => {
     try {
       const usersGetted = await axios.get(
         `${process.env.NEXT_PUBLIC_SERVER_URL}api/user/?email=${e.target.value}`
       );
-      console.log("usersGetted", usersGetted.data);
       setUsers(usersGetted.data);
-      console.log("users", users);
     } catch (error) {
       console.log(error);
     }
   };
 
   const createChat = async (id: string) => {
-    console.log("id user", id);
     dispatch(newChat(id));
   };
 

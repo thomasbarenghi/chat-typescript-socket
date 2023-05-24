@@ -5,7 +5,7 @@ import { setChats } from "./chats";
 const urlServer = process.env.NEXT_PUBLIC_SERVER_URL;
 import { Dispatch } from "redux";
 import { RootState } from "../../redux/store/store"; // Importa el tipo de tu estado raíz (RootState)
-
+import { chatsFormater } from "@/utils/chats/chatsFormater";
 const initialState = {
   auth: {
     isLogged: false,
@@ -112,8 +112,9 @@ export const getUserData = createAsyncThunk(
         isSeller: response.isSeller,
         isAdmin: response.superAdmin,
       };
-
-      const chats = response.chats;
+      const state = getState() as RootState;
+      const user = state.authSession.session.current;
+      const chats = chatsFormater({ chats: response.chats, user });
       console.log(chats);
       await dispatch(setChats(chats));
 
