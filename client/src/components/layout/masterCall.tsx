@@ -1,14 +1,18 @@
 import React, { ReactNode, useState, useEffect, useRef } from "react";
-import { SidebarChat, ChatContainer, SidebarInnerCallArea } from "@/components";
+import {
+  SidebarChat,
+  ChatContainer,
+  SidebarInnerCallArea,
+  CircularLoader,
+} from "@/components";
 import Image from "next/image";
-
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   resetChatId,
   getChats,
   chatUserStatus,
   setCurrentChat,
 } from "@/redux/slices/chats";
-import { useAppDispatch } from "@/redux/hooks";
 import { getSocket } from "@/utils/socket";
 import { useRouter } from "next/router";
 
@@ -19,50 +23,50 @@ type Props = {
 const MasterCallLayout = () => {
   const router = useRouter();
   const { slug: callId, owner } = router.query;
+  const calledUser = useAppSelector(
+    (state) => state.chats.currentChat.otherUser
+  );
   const dispatch = useAppDispatch();
   const socket = getSocket();
   const [messages, setMessages] = useState<any[]>([]);
   const [connected, setConnected] = useState<boolean>(false);
   const [Peer, setPeer] = useState<any>(null);
+  const [ownedStream, setStream] = useState<any>(null); //MediaStream
+  const [otherStream, setOtherStream] = useState<any>(null); //MediaStream
   const [myPeerId, setMyPeerId] = useState<string>("");
   const [otherPeerId, setOtherPeerId] = useState<string>("");
 
   const localVideoRef = useRef<any>(null);
   const remoteVideoRef = useRef<any>(null);
 
+  const getMedia1 = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: true,
+      });
+      return stream;
+    } catch (err) {
+      console.error("error local media", err);
+    }
+  };
+
   //Inicializar app
   useEffect(() => {
-    const getMedia = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: true,
-        });
-
-        localVideoRef.current.srcObject = stream;
-      } catch (err) {
-        console.error("error local media", err);
-      }
-    };
-
     if (owner === "true" && socket) {
       socket!.on("receivePeerId", (data) => {
-        console.log("receivePeerId", data);
+        console.log("1. UserX: Recibe peerId", data.peerId);
         setOtherPeerId(data.peerId);
       });
     }
-
-    getMedia();
-
     return () => {
       socket!.off("receivePeerId");
     };
   }, [socket]);
 
-  //Conectar a socket y quedar a la escucha de llamadas
+  //Conectar a socket y aceptar llamada
   useEffect(() => {
     const listenSocket = async () => {
-      console.log("escuchando", socket, callId);
       socket?.emit(
         "acceptCall",
         {
@@ -70,7 +74,6 @@ const MasterCallLayout = () => {
         },
         (data: any) => {
           console.log("callback", data);
-          setConnected(true);
         }
       );
 
@@ -84,7 +87,7 @@ const MasterCallLayout = () => {
     }
   }, [socket, callId]);
 
-  //Conectar a peerjs y quedar a la escucha de llamadas
+  //1. Conectar a peerjs
   useEffect(() => {
     const connectToPeer = async () => {
       import("peerjs").then(({ default: Peer }) => {
@@ -94,12 +97,11 @@ const MasterCallLayout = () => {
           path: "/peerjs/myapp",
         });
 
-        peer.on("open", (id) => {
-          console.log("My peer ID is: " + id);
+        peer.on("open", async (id) => {
           setMyPeerId(id);
           setPeer(peer);
-
           if (owner === "false") {
+            console.log("UserY: Envia peerId", id);
             socket!.emit("sendPeerId", {
               callId,
               peerId: id,
@@ -112,7 +114,6 @@ const MasterCallLayout = () => {
         });
 
         peer.on("connection", (conn) => {
-          console.log("connection", conn);
           conn.on("data", (data) => {
             console.log("received", data);
           });
@@ -120,41 +121,103 @@ const MasterCallLayout = () => {
             conn.send("hello!");
           });
         });
-
-        peer.on("call", (call) => {
-          call.answer(localVideoRef.current.srcObject);
-          call.on("stream", (remoteStream) => {
-            remoteVideoRef.current.srcObject = remoteStream;
-          });
-        });
       });
     };
+
     connectToPeer();
   }, []);
 
-  //Llamar a otro peer
+  //2. El que solicita la llamada, espera a que lo llamen
+  useEffect(() => {
+    if (Peer && owner === "false") {
+      const awaitCall = async () => {
+        console.log("3. UserY: Espera llamada");
+        const ownedStream1 = await getMedia1();
+        console.log("4. UserY: Obtiene medios locales", ownedStream1);
+        Peer.on("call", async (call: any) => {
+          console.log("5. UserY: Recibe llamada", call);
+          call.answer(ownedStream1);
+          call.on("stream", (remoteStream: any) => {
+            console.log("6. UserY: Recibe stream", remoteStream);
+            setMedia({ remoteStream: remoteStream, localStream: ownedStream1 });
+          });
+        });
+      };
+      awaitCall();
+    }
+
+    return () => {
+      Peer?.off("call");
+    };
+  }, [Peer]);
+
+  //3. Al que le solicitan la llamada, llama
   useEffect(() => {
     if (Peer) {
       const makeCall = async () => {
         let conn = Peer.connect(otherPeerId);
         conn.on("data", (data: any) => {
-          console.log("received", data);
+          setConnected(true);
         });
         conn.on("open", () => {
           conn.send("hi!");
         });
-
-        let call = Peer.call(otherPeerId, localVideoRef.current.srcObject);
+        const ownedStream1 = await getMedia1();
+        console.log("2. UserX: Obtiene medios locales", ownedStream1);
+        let call = Peer.call(otherPeerId, ownedStream1);
+        console.log("3. UserX: Llama a UserY", call);
         call.on("stream", (remoteStream: any) => {
-          remoteVideoRef.current.srcObject = remoteStream;
+          setMedia({ remoteStream: remoteStream, localStream: ownedStream1 });
         });
       };
 
       if (owner === "true" && otherPeerId !== "") {
         makeCall();
       }
+      console.log("Owned false", owner, otherPeerId);
     }
   }, [Peer, otherPeerId]);
+
+  const setMedia = async (data: any) => {
+    try {
+      console.log("UserX y UserY: Setea medios", data);
+      localVideoRef.current.srcObject = data.localStream;
+      remoteVideoRef.current.srcObject = data.remoteStream;
+    } catch (err) {
+      console.error("error local media", err);
+    }
+  };
+
+  //Si no atienden la llamada, redirigir al inicio
+  // useEffect(() => {
+  //   if (!connected && owner === "true") {
+  //     const timeout = setTimeout(() => {
+  //       router.push("/"); // Redirigir al inicio
+  //     }, 50000); // 50 segundos
+
+  //     return () => clearTimeout(timeout); // Limpiar el temporizador si el componente se desmonta antes de que expire
+  //   } else {
+  //     //   localVideoRef.current.srcObject = ownedStream;
+  //     // remoteVideoRef.current.srcObject = otherStream;
+  //   }
+  // }, [connected, router, ownedStream, otherStream]);
+
+  // if (!connected && owner === "true")
+  //   return (
+  //     <>
+  //       <div className="flex h-screen w-full items-center justify-center gap-4">
+  //         <CircularLoader />
+  //         <div className="flex flex-col">
+  //           <p className="font-medium text-violet-800">
+  //             Llamando a {calledUser?.firstName + " " + calledUser?.lastName}
+  //           </p>
+  //           <p className="text-sm text-gray-500">
+  //             Si no atiende, seras redirigido al inicio
+  //           </p>
+  //         </div>
+  //       </div>
+  //     </>
+  //   );
 
   return (
     <>

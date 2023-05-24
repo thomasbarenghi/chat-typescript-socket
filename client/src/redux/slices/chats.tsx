@@ -92,9 +92,6 @@ export const getChats = createAsyncThunk(
   }
 );
 
-
-
-
 //Reducers
 const postsSlice = createSlice({
   name: "chats",
@@ -106,14 +103,14 @@ const postsSlice = createSlice({
     setCurrentChat(state, action: PayloadAction<any>) {
       //buscamos el index del chat en el array de chats
       console.log("action.payload.newMessage", action.payload.newMessage);
-      
+
       const index: any = state.chats.findIndex((chat: any) => {
         return chat._id === action.payload.chatId;
       });
 
       //si existe actualizamos el lastMessage
       console.log("index", index);
-      
+
       if (index !== -1) {
         console.log("index act", index);
         state.chats[index].lastMessage = action.payload.newMessage;
@@ -136,7 +133,6 @@ const postsSlice = createSlice({
         });
       }
 
-      
       state.currentChat.messages = [
         ...state.currentChat.messages,
         action.payload.newMessage,
@@ -156,6 +152,9 @@ const postsSlice = createSlice({
           action.payload.status ? "esta conectado" : "esta desconectado"
         }`
       );
+    },
+    resetCurrentChat(state) {
+      state.currentChat.messages = initialState.currentChat.messages;
     },
   },
   extraReducers: (builder) => {
@@ -180,9 +179,6 @@ const postsSlice = createSlice({
       })
 
       .addCase(getChats.fulfilled, (state, action) => {
-
-        
-
         state.chats = action.payload;
       })
       .addCase(getChats.rejected, (state, action) => {
@@ -191,10 +187,14 @@ const postsSlice = createSlice({
   },
 });
 
-
-
-export const { setChats, setCurrentChat, resetChatId, chatUserStatus, setCurrentChatOtherUser } =
-  postsSlice.actions;
+export const {
+  setChats,
+  setCurrentChat,
+  resetChatId,
+  chatUserStatus,
+  setCurrentChatOtherUser,
+  resetCurrentChat,
+} = postsSlice.actions;
 
 export default postsSlice.reducer;
 

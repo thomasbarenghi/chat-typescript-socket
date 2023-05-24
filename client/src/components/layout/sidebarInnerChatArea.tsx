@@ -2,6 +2,7 @@ import Image from "next/image";
 import {
   getCurrentChat,
   setCurrentChatOtherUser,
+  resetCurrentChat,
 } from "../../redux/slices/chats";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { getSocket } from "@/utils/socket";
@@ -13,6 +14,7 @@ export default function SidebarInnerChatArea() {
   const { chats: chatsFiltered } = useAppSelector((state) => state.chats);
 
   const setSala = (e: any) => {
+    dispatch(resetCurrentChat());
     socket!.emit("selectChat", {
       chatId: e.chatId,
       otherUserId: e.otherUserId._id,

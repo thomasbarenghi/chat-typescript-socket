@@ -2,11 +2,13 @@ import Image from "next/image";
 import { getSocket } from "@/utils/socket";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { useRouter } from "next/router";
-import { TextSender } from "@/components";
+import { TextSender, AlertDialog } from "@/components";
+import { useEffect, useState } from "react";
 
 const ChatContainer = () => {
   const router = useRouter();
   const socket = getSocket();
+  const [callDialog, setCallDialog] = useState(false);
 
   const {
     currentChat,
@@ -31,8 +33,6 @@ const ChatContainer = () => {
   }
 
   const handleJoinCall = () => {
-    const acceptCall = confirm(`¿Quieres llamar a ${otherUser.firstName}?`);
-    if (!acceptCall) return;
     socket!.emit(
       "callUser",
       {
@@ -49,52 +49,59 @@ const ChatContainer = () => {
 
   return (
     <>
+      <AlertDialog
+        question={`¿Quieres llamar a ${
+          otherUser.firstName + " " + otherUser.lastName
+        }?`}
+        trueAction={handleJoinCall}
+        falseAction={() => setCallDialog(false)}
+        isOpen={callDialog}
+      />
       <div className="flex h-full max-h-[100%] w-full grid-cols-1 flex-col items-start  align-middle">
         <header
           id="chatHeader"
           className="flex min-h-[100px] w-full items-center justify-between bg-white"
         >
-          {
-            currentChat.id && (
-          <>
-          <div className="flex w-full items-center justify-start gap-2   ">
-            <Image
-              src={currentChat.otherUser.image}
-              alt="logo"
-              width={65}
-              height={65}
-              className="aspect-square rounded-full border border-violet-800 object-cover p-1"
-            />
-            <div className="relative flex w-full flex-col gap-0">
-              <p className="text-base font-medium">
-                {currentChat.otherUser.firstName +
-                  " " +
-                  currentChat.otherUser.lastName}
-              </p>
-              <p className="text-sm font-light text-violet-800">
-                {currentChat.chatUserStatus ? "Conectado" : "Desconectado"}
-              </p>
-            </div>
-          </div>
-          <div className="flex min-w-max  gap-3 ">
-            <Image
-              src="/icon/phone.svg"
-              alt="logo"
-              width={24}
-              height={24}
-              className="aspect-square cursor-pointer"
-              onClick={handleJoinCall}
-            />
-            <Image
-              src="/icon/camera.svg"
-              alt="logo"
-              width={24}
-              height={24}
-              className="aspect-square cursor-pointer"
-              onClick={handleJoinCall}
-            />
-          </div>
-          </>
+          {currentChat.id && (
+            <>
+              <div className="flex w-full items-center justify-start gap-2   ">
+                <Image
+                  src={currentChat.otherUser.image}
+                  alt="logo"
+                  width={65}
+                  height={65}
+                  className="aspect-square rounded-full border border-violet-800 object-cover p-1"
+                />
+                <div className="relative flex w-full flex-col gap-0">
+                  <p className="text-base font-medium">
+                    {currentChat.otherUser.firstName +
+                      " " +
+                      currentChat.otherUser.lastName}
+                  </p>
+                  <p className="text-sm font-light text-violet-800">
+                    {currentChat.chatUserStatus ? "Conectado" : "Desconectado"}
+                  </p>
+                </div>
+              </div>
+              <div className="flex min-w-max  gap-3 ">
+                <Image
+                  src="/icon/phone.svg"
+                  alt="logo"
+                  width={24}
+                  height={24}
+                  className="aspect-square cursor-pointer"
+                  onClick={() => setCallDialog(true)}
+                />
+                <Image
+                  src="/icon/camera.svg"
+                  alt="logo"
+                  width={24}
+                  height={24}
+                  className="aspect-square cursor-pointer"
+                  onClick={() => setCallDialog(true)}
+                />
+              </div>
+            </>
           )}
         </header>
         <div className="flex h-full w-full flex-col justify-end overflow-hidden rounded-[20px] bg-violet-50">

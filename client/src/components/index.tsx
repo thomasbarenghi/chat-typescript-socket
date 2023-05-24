@@ -8,3 +8,5 @@ export { default as Master } from "./masters/master";
 export { default as SidebarInnerChatArea } from "./layout/sidebarInnerChatArea";
 export { default as SidebarInnerCallArea } from "./layout/inner";
 export { default as MasterCallLayout } from "./layout/masterCall";
+export { default as AlertDialog } from "./layout/alertDialog";
+export { default as CircularLoader } from "./layout/circularLoader";
