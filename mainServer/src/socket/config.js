@@ -56,11 +56,10 @@ io.on("connection", async (socket) => {
     }, 5000);
   });
 
-  socket.on("acceptCall", (data, callback) => {
+  socket.on("acceptCall", (data) => {
     const { callID } = data;
     socket.join(callID);
     console.log("Llamada aceptada", socket, callID);
-    callback("Llamada aceptada");
   });
 
   socket.on("sendPeerId", (data) => {
