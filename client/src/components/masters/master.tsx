@@ -23,8 +23,11 @@ const dispatch = useAppDispatch();
     connectSocket();
 
     const socket = getSocket();
+    console.log("pre socket", socket);
     if (socket) {
+      console.log("socket", socket);
       socket.on("connect", () => {
+        console.log("socket connected");
         setSocketAvailable(true);
       });
     }
@@ -36,9 +39,9 @@ const dispatch = useAppDispatch();
     };
   }, [session]);
 
-  // if (!socketAvailable) {
-  //   return <div>Cargando...</div>;
-  // }
+  if (!socketAvailable) {
+    return <div>Cargando...</div>;
+  }
 
   const resetCallState = () => {
     dispatch(reset());
