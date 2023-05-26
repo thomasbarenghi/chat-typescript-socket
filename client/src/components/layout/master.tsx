@@ -30,11 +30,12 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
       });
 
       socket.on("otherUserStatus", (data: any) => {
+        console.log("otherUserStatus",data);
         dispatch(chatUserStatus(data));
       });
 
       socket.on("newMessage", (message: any) => {
-  
+  console.log("newMessage",message);
         dispatch(setCurrentChat(message)); //chatId
       });
 
