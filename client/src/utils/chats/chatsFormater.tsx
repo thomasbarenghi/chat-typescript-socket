@@ -6,7 +6,7 @@ type Props = {
   export const chatsFormater = ({ chats, user }: Props) => {
     if (chats[0] === null) return null;
   
-    console.log("chats", chats);
+  
     const chatsFiltered = chats.map((chat: any) => {
       const filteredParticipants = chat.participants.filter(
         (participant: any) => participant._id !== user._id

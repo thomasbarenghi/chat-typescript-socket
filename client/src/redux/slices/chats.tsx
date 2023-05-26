@@ -28,7 +28,7 @@ export const getCurrentChat = createAsyncThunk(
         `${urlServer}api/user/${user._id}/chats/${chatId}`
       );
       // const messages = messageFormater({ messages: res.data.messages, user });
-      console.log("res.data.messages", res.data.messages);
+
       return { messages: res.data.messages, id: chatId };
     } catch (error: any) {
       return rejectWithValue(error.response.data);
@@ -40,7 +40,7 @@ export const newChat = createAsyncThunk(
   "chats/newChat",
   async (id: string, { rejectWithValue, getState, dispatch }) => {
     try {
-      console.log("id rec", id);
+
       const state = getState() as RootState;
       const user = state.authSession.session.current;
       if (id === user._id) {
@@ -63,7 +63,7 @@ export const newChat = createAsyncThunk(
 
       dispatch(getChats());
       const socket = getSocket();
-      console.log("socket:", id);
+    
       socket?.emit("newChat", {
         toUserId: id,
         chatId: res.data._id,
@@ -83,7 +83,7 @@ export const getChats = createAsyncThunk(
       const state = getState() as RootState;
       const user = state.authSession.session.current;
       const res = await axios.get(`${urlServer}api/user/${user._id}/chats`);
-      console.log("res.data", res.data);
+   
       const chats = chatsFormater({ chats: res.data, user });
       return chats;
     } catch (error: any) {
@@ -102,22 +102,22 @@ const postsSlice = createSlice({
     },
     setCurrentChat(state, action: PayloadAction<any>) {
       //buscamos el index del chat en el array de chats
-      console.log("action.payload.newMessage", action.payload.newMessage);
+
 
       const index: any = state.chats.findIndex((chat: any) => {
         return chat._id === action.payload.chatId;
       });
 
       //si existe actualizamos el lastMessage
-      console.log("index", index);
+ 
 
       if (index !== -1) {
-        console.log("index act", index);
+ 
         state.chats[index].lastMessage = action.payload.newMessage;
         state.chats[index].lastModified = new Date(Date.now()).toISOString();
 
         if (action.payload.newMessage.type !== "text") {
-          console.log("es archivo");
+        
           state.chats[index].lastMessage = {
             ...state.chats[index].lastMessage,
             content: "Archivo",
@@ -140,7 +140,7 @@ const postsSlice = createSlice({
     },
     setCurrentChatOtherUser(state, action: PayloadAction<any>) {
       state.currentChat.otherUser = action.payload;
-      console.log("state.currentChat.otherUser", state.currentChat.otherUser);
+
     },
     resetChatId(state) {
       state.currentChat.id = null;
@@ -182,7 +182,7 @@ const postsSlice = createSlice({
         state.chats = action.payload;
       })
       .addCase(getChats.rejected, (state, action) => {
-        console.log("getChats error");
+   
       });
   },
 });
@@ -197,27 +197,3 @@ export const {
 } = postsSlice.actions;
 
 export default postsSlice.reducer;
-
-// type Props = {
-//   messages: any;
-//   user: any;
-// };
-
-// export const messageFormater = ({ messages, user }: Props) => {
-//   console.log("messages", messages);
-//   const formated = messages.map((message: any) => {
-//     if (message.sender._id === user._id) {
-//       return {
-//         ...message,
-//         origin: true,
-//       };
-//     } else {
-//       return {
-//         ...message,
-//         origin: false,
-//       };
-//     }
-//   });
-
-//   return formated;
-// };

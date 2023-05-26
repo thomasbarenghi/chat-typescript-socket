@@ -42,11 +42,11 @@ const HOC: React.FC<Props> = ({ children }) => {
     : typeof router.query.id === "string"
     ? router.query.id
     : "";
-  console.log("query", router.query);
+
   //--------------------
   //HOC GOOGLE AUTH
   const googleAuth = async (headers: string) => {
-    console.log("headers2", headers);
+
     try {
       const verify = await axios.get(`${urlServer}api/auth/google/verify`, {
         headers: {
@@ -54,16 +54,15 @@ const HOC: React.FC<Props> = ({ children }) => {
         },
       });
 
-      console.log("verify", verify);
-      console.log("clientId", clientId);
+
       if (clientId && clientId !== undefined) {
-        console.log("clientId", clientId);
+
         await dispatch(getUserData(clientId));
-        console.log("vamos bien");
+  
         dispatch(setGoogleSuccefull(headers));
       }
     } catch (error: any) {
-      console.log("Error al iniciar con google", error.message);
+
       dispatch(resetReducer());
       router.push("/");
     }
@@ -72,7 +71,7 @@ const HOC: React.FC<Props> = ({ children }) => {
   useEffect(() => {
     if (loginMethod === "google" && GoogleSessionID) {
       const headers = GoogleSessionID.toString();
-      console.log("headers", headers);
+  
       googleAuth(headers);
     }
   }, [GoogleSessionID, loginMethod, clientId]);

@@ -25,10 +25,10 @@ const peerServer = ExpressPeerServer(listener, {
 });
 
 peerServer.on("connection", (client) => {
-  console.log("connection", client);
+
 });
 peerServer.on("disconnect", (client) => {
-  console.log("disconnect", client);
+console.log("disconnect");
 });
 peerServer.on("error", (client) => {
   console.log("error", client);

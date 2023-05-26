@@ -14,9 +14,7 @@ export default function SidebarInnerChatArea() {
 
   useEffect(() => {
     const listenSocket = async () => {
-      console.log("sendMessage", socket);
       socket?.on("newTempMessage", (message: any) => {
-        console.log("newTempMessage", message);
         setMessages((prev) => [...prev, message]);
       });
     };
@@ -24,7 +22,7 @@ export default function SidebarInnerChatArea() {
     if (socket && socket.connected && socket !== null) {
       listenSocket();
     }
-    console.log("useEffect", socket);
+
     return () => {
       socket?.off("newTempMessage");
     };
@@ -33,7 +31,6 @@ export default function SidebarInnerChatArea() {
   const sendMessage = (e: any) => {
     e.preventDefault();
     if (socket) {
-      console.log("sendMessage", socket);
       socket?.emit("tempMessage", {
         callID: callId,
         message: e.target.msj.value,

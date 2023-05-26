@@ -23,8 +23,6 @@
 //  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(persistMiddleware),
 // });
 
-
-
 // // export type RootState = ReturnType<typeof store.getState>;
 // // export type AppDispatch = typeof store.dispatch;
 // // export const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -37,15 +35,15 @@
 
 // export default store;
 
-import { configureStore, getDefaultMiddleware } from '@reduxjs/toolkit';
-import { persistStore, persistReducer } from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
-import rootReducer from '../rootReducer';
+import { configureStore, getDefaultMiddleware } from "@reduxjs/toolkit";
+import { persistStore, persistReducer } from "redux-persist";
+import storage from "redux-persist/lib/storage";
+import rootReducer from "../rootReducer";
 
 const persistConfig = {
-  key: 'root',
+  key: "root",
   storage,
-  whitelist: ['authSession', 'chats'],
+  whitelist: ["authSession", "chats", "call"],
   debug: true,
 };
 const persistMiddleware = getDefaultMiddleware({
@@ -55,7 +53,8 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 const store = configureStore({
   reducer: persistedReducer,
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(persistMiddleware),
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(persistMiddleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

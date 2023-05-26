@@ -45,7 +45,7 @@ const ChatContainer = () => {
     );
   };
 
-  console.log("currentChat", currentChat.messages);
+
 
   return (
     <>

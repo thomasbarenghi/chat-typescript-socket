@@ -2,6 +2,7 @@ import React, { ReactNode, useState, useEffect, useMemo } from "react";
 import { debounce } from "lodash";
 import { getSocket, initSocket } from "@/utils/socket";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { reset } from "@/redux/slices/call";
 type Props = {
   children: ReactNode;
 };
@@ -9,7 +10,7 @@ type Props = {
 const Master: React.FC<Props> = ({ children }) => {
   const session = useAppSelector((state) => state.authSession.session.current);
   const [socketAvailable, setSocketAvailable] = useState(false);
-
+const dispatch = useAppDispatch();
   useEffect(() => {
     const connectSocket = async () => {
       try {
@@ -39,7 +40,15 @@ const Master: React.FC<Props> = ({ children }) => {
     return <div>Cargando...</div>;
   }
 
-  return <div>{children}</div>;
+  const resetCallState = () => {
+    dispatch(reset());
+  };
+
+  return <div>{children}
+  <button onClick={resetCallState}>
+    reset call state
+  </button>
+  </div>;
 };
 
 export default Master;

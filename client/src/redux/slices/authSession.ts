@@ -115,7 +115,7 @@ export const getUserData = createAsyncThunk(
       const state = getState() as RootState;
       const user = state.authSession.session.current;
       const chats = chatsFormater({ chats: response.chats, user });
-      console.log(chats);
+
       await dispatch(setChats(chats));
 
       const session = createUserSession(response);
@@ -137,7 +137,7 @@ const postsSlice = createSlice({
       state.auth.loginMethod = action.payload;
     },
     setGoogleSuccefull: (state, action: PayloadAction<string>) => {
-      console.log("setGoogleSuccefull");
+
       state.auth.isLogged = true;
       state.auth.tokenValid = true;
       state.auth.google.googleSessionID = action.payload;
@@ -152,7 +152,7 @@ const postsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(getUserData.pending, (state) => {
-        console.log("pending");
+    
       })
       .addCase(getUserData.fulfilled, (state, action: any) => {
         state.auth = { ...state.auth, ...action.payload.auth };
@@ -162,7 +162,6 @@ const postsSlice = createSlice({
         };
       })
       .addCase(getUserData.rejected, (state, action) => {
-        console.log("rejected");
         state.auth.isLogged = false;
         state.auth.tokenValid = false;
       });

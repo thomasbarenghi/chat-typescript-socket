@@ -63,11 +63,18 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("sendPeerId", (data) => {
-    const { callId, peerId } = data;
+    const { callId, peerId, currentUserId } = data;
     console.log("sendPeerId", peerId, callId);
     io.to(callId).emit("receivePeerId", {
       peerId,
+      otherUserId: currentUserId,
     });
+
+    socket.on("endCall", (data) => {
+      const { callId } = data;
+      console.log("endCall", callId);
+      io.to(callId).emit("callEnded");
+    })
   });
 
   //verificar si el usuario esta conectado a la sala callId y si no esta conectado lo conectamos

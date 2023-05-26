@@ -5,24 +5,48 @@ import {
   CircularLoader,
 } from "@/components";
 import Image from "next/image";
-import { useAppSelector } from "@/redux/hooks";
+import { useAppSelector, useAppDispatch } from "@/redux/hooks";
 import { getSocket } from "@/utils/socket";
 import { useRouter } from "next/router";
+import {
+  setCallAccepted,
+  setMyPeerId,
+  setOtherPeerId,
+  setRoomId,
+  setFirstConnection,
+  reset,
+} from "@/redux/slices/call";
+
+const peerServer:any = process.env.NEXT_PUBLIC_PEER_URL;
+const peerPort:any = process.env.NEXT_PUBLIC_PEER_PORT;
 
 const MasterCallLayout = () => {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const { slug: callId, owner } = router.query;
   const calledUser = useAppSelector(
     (state) => state.chats.currentChat.otherUser
   );
+
+  const {
+    callAccepted,
+    callEnded,
+    roomId,
+    myPeerId,
+    otherPeerId,
+    droppedCall,
+    firstConnection: connected,
+  } = useAppSelector((state) => state.call);
+
+  const currentUserId = useAppSelector(
+    (state) => state.authSession.session.current._id
+  );
+
   const socket = getSocket();
-  const [connected, setConnected] = useState<boolean>(false);
   const [Peer, setPeer] = useState<any>(null);
-  const [myPeerId, setMyPeerId] = useState<string>("");
-  const [otherPeerId, setOtherPeerId] = useState<string>("");
   const [lastHeartbeatTime, setLastHeartbeatTime] = useState<Date | null>(null);
   const [reconnecting, setReconnecting] = useState<boolean>(false);
-  const [droppedCall, setDroppedCall] = useState<boolean>(false);
+  const [dataConnection, setDataConnection] = useState<any>(null);
   const localVideoRef = useRef<any>(null);
   const remoteVideoRef = useRef<any>(null);
 
@@ -36,11 +60,24 @@ const MasterCallLayout = () => {
         callID: callId,
       });
 
-      if (owner === "true") {
-        socket!.on("receivePeerId", (data) => {
-          setOtherPeerId(data.peerId);
-        });
-      }
+      socket!.on("receivePeerId", (data) => {
+        if (data.otherUserId !== currentUserId) {
+          console.log("UserXY: Recibe peerId", data.peerId);
+          dispatch(setOtherPeerId(data.peerId));
+          if (connected && otherPeerId !== data.peerId) {
+            console.log("UserXY: Reconnect");
+            reconnectCall({
+              peer: Peer,
+              peerId: data.peerId,
+            });
+          }
+        }
+      });
+
+      socket!.on("callEnded", () => {
+        console.log("callEnded");
+       // otherDisconnectCall();
+      });
     };
 
     if (socket?.connected) {
@@ -50,6 +87,7 @@ const MasterCallLayout = () => {
     return () => {
       socket?.off("acceptCall");
       socket?.off("receivePeerId");
+      socket?.off("callEnded");
     };
   }, [socket, callId, owner]);
 
@@ -58,29 +96,31 @@ const MasterCallLayout = () => {
     const connectToPeer = async () => {
       import("peerjs").then(({ default: Peer }) => {
         const peer = new Peer({
-          host: "localhost",
-          port: 3002,
+          host: peerServer,
+          port: peerPort,
           path: "/peerjs/myapp",
         });
-
+        setPeer(peer);
         peer.on("open", async (id) => {
-          setMyPeerId(id);
+          const myId = id;
+          dispatch(setMyPeerId(myId));
           setPeer(peer);
-          if (owner === "false") {
-            console.log("UserY: Envia peerId", id);
-            socket!.emit("sendPeerId", {
-              callId,
-              peerId: id,
-            });
-          }
+          console.log("UserXY: Envia peerId", id);
+          socket!.emit("sendPeerId", {
+            callId,
+            peerId: id,
+            currentUserId: currentUserId,
+          });
         });
 
         peer.on("error", (error) => {
-          console.error("Error PeerJS:", error);
+          // console.error("Error PeerJS:", error);
+          //  reconnectCall(peer);
         });
 
         peer.on("connection", (conn) => {
           handleDataConnection(conn);
+          console.log("UserXY: Conectado", conn);
         });
       });
     };
@@ -92,7 +132,7 @@ const MasterCallLayout = () => {
   useEffect(() => {
     if (!connected) {
       const timeout = setTimeout(() => {
-        router.push("/");
+        router.push("/chat");
       }, 50000);
       return () => clearTimeout(timeout);
     }
@@ -108,7 +148,7 @@ const MasterCallLayout = () => {
   useEffect(() => {
     if (droppedCall === true) {
       setTimeout(() => {
-        // router.push("/");
+        router.push("/chat");
       }, 10000);
     }
   }, [droppedCall, router]);
@@ -136,7 +176,13 @@ const MasterCallLayout = () => {
   //Hacemos una llamada
   useEffect(() => {
     if (Peer && owner === "true" && otherPeerId !== "") {
-      makeCall();
+      makeCall({
+        peer: Peer,
+      });
+    } else if (Peer && otherPeerId !== "" && connected) {
+      makeCall({
+        peer: Peer,
+      });
     }
   }, [Peer, otherPeerId]);
 
@@ -156,7 +202,7 @@ const MasterCallLayout = () => {
 
   const setMedia = async (data: any) => {
     try {
-      setConnected(true);
+      dispatch(setFirstConnection(true));
       localVideoRef.current.srcObject = data.localStream;
       remoteVideoRef.current.srcObject = data.remoteStream;
     } catch (err) {
@@ -177,14 +223,18 @@ const MasterCallLayout = () => {
     });
   };
 
-  const makeCall = async () => {
-    let conn = Peer.connect(otherPeerId);
-    handleDataConnection(conn);
-    const ownedStream1 = await getMedia();
-    let call = Peer!.call(otherPeerId, ownedStream1);
-    call!.on("stream", (remoteStream: any) => {
-      setMedia({ remoteStream: remoteStream, localStream: ownedStream1 });
-    });
+  const makeCall = async ({ peer }: any) => {
+    try {
+      let conn = peer.connect(otherPeerId);
+      handleDataConnection(conn);
+      const ownedStream1 = await getMedia();
+      let call = peer!.call(otherPeerId, ownedStream1);
+      call!.on("stream", (remoteStream: any) => {
+        setMedia({ remoteStream: remoteStream, localStream: ownedStream1 });
+      });
+    } catch (err) {
+      console.error("error makecall", err);
+    }
   };
 
   const checkConnectionLost = () => {
@@ -196,13 +246,49 @@ const MasterCallLayout = () => {
       if (elapsed > heartbeatTimeout && elapsed < 50000) {
         setReconnecting(true);
       } else if (elapsed > 50000) {
-        setDroppedCall(true);
+        disconnectCall();
         setReconnecting(false);
       } else {
         setReconnecting(false);
       }
     }
   };
+
+  const reconnectCall = async (data: any) => {
+    try {
+      const { peer, peerId } = data;
+      console.log("Reconectando llamada con", peerId, peer);
+      const ownedStream1 = await getMedia();
+      let call = peer!.call(peerId, ownedStream1);
+      call!.on("stream", (remoteStream: any) => {
+        setMedia({ remoteStream: remoteStream, localStream: ownedStream1 });
+      });
+    } catch (err) {
+      console.error("error Reconectando", err);
+    }
+  };
+
+  const disconnectCall = async () => {
+    // console.log("Desconectando llamada xxx", dataConnection);
+    // if (dataConnection) {
+    //   socket!.emit("endCall", { callId: router.query.slug });
+    //   console.log("Desconectando llamada");
+    //   dataConnection!.close();
+
+    //   await dispatch(reset());
+    //   router.push("/chat");
+    // }
+  };
+
+  // const otherDisconnectCall = async () => {
+  //   console.log("Desconectando llamada1", Peer);
+  //   if (dataConnection) {
+  //     console.log("Desconectando llamada2");
+  //     dataConnection!.close();
+  //     await dispatch(reset());
+  //     router.push("/chat");
+  //   }
+  // };
 
   //--------------------------------------------------------------------------------
 
@@ -213,6 +299,7 @@ const MasterCallLayout = () => {
           <div className="relative h-full ">
             <div className="absolute bottom-0 right-0 top-0 grid h-full  w-full grid-cols-[350px,auto] overflow-hidden ">
               <div className="h-full max-h-screen overflow-y-auto">
+                my peer id: {myPeerId}
                 <SidebarChat>
                   <SidebarInnerCallArea />
                 </SidebarChat>
@@ -226,6 +313,7 @@ const MasterCallLayout = () => {
                   <CallControl
                     localVideoRef={localVideoRef}
                     remoteVideoRef={remoteVideoRef}
+                    disconnectCall={disconnectCall}
                   />
                 </div>
               </div>
@@ -295,7 +383,10 @@ function CallContainer({ localVideoRef, remoteVideoRef }: any) {
   );
 }
 
-function CallControl({ localVideoRef, remoteVideoRef }: any) {
+function CallControl({ localVideoRef, remoteVideoRef, disconnectCall }: any) {
+  const socket = getSocket();
+  const dispatch = useAppDispatch();
+  const router = useRouter();
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isCameraOn, setIsCameraOn] = useState<boolean>(false);
 
@@ -310,6 +401,10 @@ function CallControl({ localVideoRef, remoteVideoRef }: any) {
       localVideoRef.current.srcObject.getVideoTracks()[0].enabled = isCameraOn;
     }
   }, [isCameraOn]);
+
+  const endCall = async () => {
+    disconnectCall();
+  };
 
   const callControlButtons = [
     {
@@ -335,7 +430,10 @@ function CallControl({ localVideoRef, remoteVideoRef }: any) {
           ))}
         </div>
         <div>
-          <button className="rounded-full bg-red-800 px-4 py-2 text-white">
+          <button
+            className="rounded-full bg-red-800 px-4 py-2 text-white"
+            onClick={endCall}
+          >
             Finalizar
           </button>
         </div>
