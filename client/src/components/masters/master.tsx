@@ -36,9 +36,9 @@ const dispatch = useAppDispatch();
     };
   }, [session]);
 
-  if (!socketAvailable) {
-    return <div>Cargando...</div>;
-  }
+  // if (!socketAvailable) {
+  //   return <div>Cargando...</div>;
+  // }
 
   const resetCallState = () => {
     dispatch(reset());
