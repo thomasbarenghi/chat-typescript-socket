@@ -40,9 +40,9 @@ const sendMessage = async ({ message, socket, io }) => {
     );
 
     io.to(message.chatId).emit("newMessage", toFront);
- 
-const otherUserId = chat.participants.filter((user) => user != message.user)[0].toString();
-console.log("Mensaje enviado:", otherUserId);
+
+    const otherUserId = chat.participants.filter((user) => user != message.user)[0].toString();
+    console.log("Mensaje enviado:", otherUserId);
     io.to(otherUserId).emit("newChat");
   } catch (error) {
     console.log("Error al guardar el mensaje:", error.message);

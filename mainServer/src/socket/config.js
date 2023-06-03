@@ -49,10 +49,10 @@ io.on("connection", async (socket) => {
     callback(callId);
 
     setTimeout(() => {
-    io.to(toUserID).emit("comingCall", {
-      callID: callId,
-      fromUserID,
-    });
+      io.to(toUserID).emit("comingCall", {
+        callID: callId,
+        fromUserID,
+      });
     }, 5000);
   });
 
@@ -73,6 +73,8 @@ io.on("connection", async (socket) => {
     socket.on("endCall", (data) => {
       const { callId } = data;
       console.log("endCall", callId);
+      //desconectamos al usuario de la sala
+      socket.leave(callId);
       io.to(callId).emit("callEnded");
     })
   });
@@ -87,7 +89,7 @@ io.on("connection", async (socket) => {
       message,
       user,
     };
-   
+
     io.to(callID).emit("newTempMessage", newMessage);
   });
 });

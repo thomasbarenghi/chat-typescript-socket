@@ -17,8 +17,8 @@ import {
   reset,
 } from "@/redux/slices/call";
 
-const peerServer:any = process.env.NEXT_PUBLIC_PEER_URL;
-const peerPort:any = process.env.NEXT_PUBLIC_PEER_PORT;
+const peerServer: any = process.env.NEXT_PUBLIC_PEER_URL;
+const peerPort: any = process.env.NEXT_PUBLIC_PEER_PORT;
 
 const MasterCallLayout = () => {
   const router = useRouter();
@@ -43,7 +43,8 @@ const MasterCallLayout = () => {
   );
 
   const socket = getSocket();
-  const [Peer, setPeer] = useState<any>(null);
+  const peerRef = useRef<any>(null);
+  //const [Peer, setPeer] = useState<any>(null);
   const [lastHeartbeatTime, setLastHeartbeatTime] = useState<Date | null>(null);
   const [reconnecting, setReconnecting] = useState<boolean>(false);
   const [dataConnection, setDataConnection] = useState<any>(null);
@@ -67,7 +68,7 @@ const MasterCallLayout = () => {
           if (connected && otherPeerId !== data.peerId) {
             console.log("UserXY: Reconnect");
             reconnectCall({
-              peer: Peer,
+              peer: peerRef.current,
               peerId: data.peerId,
             });
           }
@@ -76,7 +77,7 @@ const MasterCallLayout = () => {
 
       socket!.on("callEnded", () => {
         console.log("callEnded");
-       // otherDisconnectCall();
+        otherDisconnectCall();
       });
     };
 
@@ -100,11 +101,12 @@ const MasterCallLayout = () => {
           port: peerPort,
           path: "/peerjs/myapp",
         });
-        setPeer(peer);
+        peerRef.current = peer;
+
         peer.on("open", async (id) => {
           const myId = id;
           dispatch(setMyPeerId(myId));
-          setPeer(peer);
+          peerRef.current = peer;
           console.log("UserXY: Envia peerId", id);
           socket!.emit("sendPeerId", {
             callId,
@@ -155,10 +157,10 @@ const MasterCallLayout = () => {
 
   //Esperamos una llamada
   useEffect(() => {
-    if (Peer && owner === "false") {
+    if (peerRef.current && owner === "false") {
       const awaitCall = async () => {
         const ownedStream1 = await getMedia();
-        Peer.on("call", async (call: any) => {
+        peerRef.current.on("call", async (call: any) => {
           call.answer(ownedStream1);
           call.on("stream", (remoteStream: any) => {
             setMedia({ remoteStream: remoteStream, localStream: ownedStream1 });
@@ -169,22 +171,22 @@ const MasterCallLayout = () => {
     }
 
     return () => {
-      Peer?.off("call");
+      peerRef.current?.off("call");
     };
-  }, [Peer]);
+  }, [peerRef.current]);
 
   //Hacemos una llamada
   useEffect(() => {
-    if (Peer && owner === "true" && otherPeerId !== "") {
+    if (peerRef.current && owner === "true" && otherPeerId !== "") {
       makeCall({
-        peer: Peer,
+        peer: peerRef.current,
       });
-    } else if (Peer && otherPeerId !== "" && connected) {
+    } else if (peerRef.current && otherPeerId !== "" && connected) {
       makeCall({
-        peer: Peer,
+        peer: peerRef.current,
       });
     }
-  }, [Peer, otherPeerId]);
+  }, [peerRef.current, otherPeerId]);
 
   //--------------------------------------------------------------------------------
   //Funciones modulares
@@ -269,26 +271,36 @@ const MasterCallLayout = () => {
   };
 
   const disconnectCall = async () => {
-    console.log("Desconectando llamada xxx", dataConnection);
-    if (dataConnection) {
+    console.log("Desconectando llamada xxx", peerRef.current);
+    if (peerRef.current) {
       socket!.emit("endCall", { callId: router.query.slug });
-      console.log("Desconectando llamada");
-      dataConnection!.close();
-
+      console.log("yo desconecto");
+      await peerRef.current!.destroy();
+     await  stopLocalStream();
       await dispatch(reset());
       router.push("/chat");
     }
   };
 
-  // const otherDisconnectCall = async () => {
-  //   console.log("Desconectando llamada1", Peer);
-  //   if (dataConnection) {
-  //     console.log("Desconectando llamada2");
-  //     dataConnection!.close();
-  //     await dispatch(reset());
-  //     router.push("/chat");
-  //   }
-  // };
+  const otherDisconnectCall = async () => {
+    console.log("el otro desconecto", peerRef.current);
+    if (peerRef.current) {
+      console.log("Desconectando llamada2");
+     await peerRef.current!.destroy();
+      await stopLocalStream();
+      await dispatch(reset());
+       router.push("/chat");
+    }
+  };
+
+  const stopLocalStream = () => {
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject?.getTracks().forEach((track: any) => {
+        track.stop();
+      }
+      );
+    }
+  }
 
   //--------------------------------------------------------------------------------
 
@@ -324,9 +336,8 @@ const MasterCallLayout = () => {
           <DynamicDialog
             title={
               owner === "true"
-                ? ` Llamando a ${
-                    calledUser?.firstName + " " + calledUser?.lastName
-                  }`
+                ? ` Llamando a ${calledUser?.firstName + " " + calledUser?.lastName
+                }`
                 : "Conectando"
             }
             description={
@@ -469,3 +480,5 @@ function DynamicCallControl({ icon, onClick, key }: any) {
     />
   );
 }
+
+
