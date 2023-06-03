@@ -30,12 +30,12 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
       });
 
       socket.on("otherUserStatus", (data: any) => {
-        console.log("otherUserStatus",data);
+        console.log("otherUserStatus", data);
         dispatch(chatUserStatus(data));
       });
 
       socket.on("newMessage", (message: any) => {
-  console.log("newMessage",message);
+        console.log("newMessage", message);
         dispatch(setCurrentChat(message)); //chatId
       });
 
@@ -47,9 +47,7 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
             {
               callID: data.callID,
             },
-            (data: any) => {
-        
-            }
+            (data: any) => {}
           );
           router.push(`/call/${data.callID}?owner=false`);
         }
@@ -90,7 +88,6 @@ const MasterLayout: React.FC<Props> = ({ children }) => {
 };
 
 const Header = (session: any) => {
-
   return (
     <header className="flex h-[80px] items-center justify-center  bg-white ">
       <div className="padding-x-estilo2 flex w-full items-center justify-between px-8 ">

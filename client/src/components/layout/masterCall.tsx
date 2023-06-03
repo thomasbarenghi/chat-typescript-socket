@@ -269,15 +269,15 @@ const MasterCallLayout = () => {
   };
 
   const disconnectCall = async () => {
-    // console.log("Desconectando llamada xxx", dataConnection);
-    // if (dataConnection) {
-    //   socket!.emit("endCall", { callId: router.query.slug });
-    //   console.log("Desconectando llamada");
-    //   dataConnection!.close();
+    console.log("Desconectando llamada xxx", dataConnection);
+    if (dataConnection) {
+      socket!.emit("endCall", { callId: router.query.slug });
+      console.log("Desconectando llamada");
+      dataConnection!.close();
 
-    //   await dispatch(reset());
-    //   router.push("/chat");
-    // }
+      await dispatch(reset());
+      router.push("/chat");
+    }
   };
 
   // const otherDisconnectCall = async () => {

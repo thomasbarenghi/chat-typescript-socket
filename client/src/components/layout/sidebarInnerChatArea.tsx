@@ -6,13 +6,16 @@ import {
 } from "../../redux/slices/chats";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { getSocket } from "@/utils/socket";
+import { Modal, SearchUser } from "@/components";
+import { useState } from "react";
 
 
 export default function SidebarInnerChatArea() {
   const dispatch = useAppDispatch();
   const socket = getSocket();
   const { chats: chatsFiltered } = useAppSelector((state) => state.chats);
-
+  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen2, setIsOpen2] = useState(false);
   const setSala = (e: any) => {
     dispatch(resetCurrentChat());
     socket!.emit("selectChat", {
@@ -27,7 +30,50 @@ export default function SidebarInnerChatArea() {
   return (
     <>
       <Search />
-      <Chat chatsFiltered={chatsFiltered} setSala={setSala} />
+      <div className="flex h-full max-h-full  w-full flex-col">
+        <Chat chatsFiltered={chatsFiltered} setSala={setSala} />
+        <div className="flex gap-4">
+          <button
+            className="flex items-center justify-start gap-2 text-sm"
+            onClick={() => setIsOpen(true)}
+          >
+            <Image
+              src="/icon/plus.svg"
+              alt="logo"
+              width={20}
+              height={20}
+              className="aspect-square"
+            />
+            Nuevo chat
+          </button>
+          <button
+            className="flex items-center justify-start gap-2 text-sm"
+            onClick={() => setIsOpen2(true)}
+          >
+            <Image
+              src="/icon/settings.svg"
+              alt="logo"
+              width={20}
+              height={20}
+              className="aspect-square"
+            />
+            Ajustes
+          </button>
+        </div>
+      </div>
+      <div className="absolute bg-red-700">
+        <Modal isOpen={isOpen} close={() => setIsOpen(false)}>
+          <div>
+            <SearchUser />
+          </div>
+        </Modal>
+        <Modal isOpen={isOpen2} close={() => setIsOpen2(false)}>
+          <div className="flex flex-col">
+            <button>Configuracion</button>
+            <button>Salir</button>
+          </div>
+        </Modal>
+      </div>
     </>
   );
 }
@@ -58,11 +104,16 @@ type PropsChat = {
 
 function Chat({ chatsFiltered, setSala }: PropsChat) {
   return (
-    <div className="relative h-full min-w-full overflow-y-scroll ">
+    <div className="relative h-auto min-w-full flex-grow overflow-y-scroll ">
       <div className="absolute bottom-0 left-0 top-0 flex w-full flex-col gap-4 overflow-y-scroll">
         {chatsFiltered &&
           chatsFiltered.map((chat: any, index: any) => (
             <div
+            onContextMenu={(e) => {
+              e.preventDefault();
+              console.log("click derecho");
+            }
+            }
               key={index}
               className="flex cursor-pointer items-center  justify-between"
               onClick={(e) =>

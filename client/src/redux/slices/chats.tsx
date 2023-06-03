@@ -39,21 +39,20 @@ export const getCurrentChat = createAsyncThunk(
 export const newChat = createAsyncThunk(
   "chats/newChat",
   async (id: string, { rejectWithValue, getState, dispatch }) => {
+    console.log("newChat");
     try {
-
       const state = getState() as RootState;
       const user = state.authSession.session.current;
       if (id === user._id) {
         return rejectWithValue("No puedes enviarte mensajes a ti mismo");
       }
       const chat = state.chats.chats.some((chat: any) => {
-        return chat.participants.some((participant: any) => {
-          return participant._id === id;
-        });
+        //comparamos chat.participants._id con id
+        return chat.participants._id === id;
       });
 
       if (chat) {
-        //  return rejectWithValue("Ya existe un chat con este usuario");
+        return rejectWithValue("Ya existe un chat con este usuario");
       }
 
       const res = await axios.post(`${urlServer}api/chat/`, {
@@ -63,7 +62,7 @@ export const newChat = createAsyncThunk(
 
       dispatch(getChats());
       const socket = getSocket();
-    
+
       socket?.emit("newChat", {
         toUserId: id,
         chatId: res.data._id,
@@ -83,9 +82,29 @@ export const getChats = createAsyncThunk(
       const state = getState() as RootState;
       const user = state.authSession.session.current;
       const res = await axios.get(`${urlServer}api/user/${user._id}/chats`);
-   
+
       const chats = chatsFormater({ chats: res.data, user });
       return chats;
+    } catch (error: any) {
+      return rejectWithValue(error);
+    }
+  }
+);
+
+export const deleteChat = createAsyncThunk(
+  "chats/deleteChat",
+  async (chatId: string, { rejectWithValue, getState, dispatch }) => {
+    try {
+      const state = getState() as RootState;
+      const user = state.authSession.session.current;
+      const res = await axios.delete(
+        `${urlServer}api/chat/${chatId}/${user._id}`
+      );
+      if (chatId === state.chats.currentChat.id) {
+        await dispatch(resetCurrentChat());
+      }
+      await dispatch(getChats());
+      return res.data;
     } catch (error: any) {
       return rejectWithValue(error);
     }
@@ -103,21 +122,17 @@ const postsSlice = createSlice({
     setCurrentChat(state, action: PayloadAction<any>) {
       //buscamos el index del chat en el array de chats
 
-
       const index: any = state.chats.findIndex((chat: any) => {
         return chat._id === action.payload.chatId;
       });
 
       //si existe actualizamos el lastMessage
- 
 
       if (index !== -1) {
- 
         state.chats[index].lastMessage = action.payload.newMessage;
         state.chats[index].lastModified = new Date(Date.now()).toISOString();
 
         if (action.payload.newMessage.type !== "text") {
-        
           state.chats[index].lastMessage = {
             ...state.chats[index].lastMessage,
             content: "Archivo",
@@ -140,7 +155,6 @@ const postsSlice = createSlice({
     },
     setCurrentChatOtherUser(state, action: PayloadAction<any>) {
       state.currentChat.otherUser = action.payload;
-
     },
     resetChatId(state) {
       state.currentChat.id = null;
@@ -154,7 +168,8 @@ const postsSlice = createSlice({
       );
     },
     resetCurrentChat(state) {
-      state.currentChat.messages = initialState.currentChat.messages;
+      state.currentChat = initialState.currentChat;
+      // state.currentChat.messages = initialState.currentChat.messages;
     },
   },
   extraReducers: (builder) => {
@@ -181,8 +196,12 @@ const postsSlice = createSlice({
       .addCase(getChats.fulfilled, (state, action) => {
         state.chats = action.payload;
       })
-      .addCase(getChats.rejected, (state, action) => {
-   
+      .addCase(getChats.rejected, (state, action) => {})
+      .addCase(deleteChat.fulfilled, (state, action) => {
+        toast.success("Chat eliminado", toastSuccess);
+      })
+      .addCase(deleteChat.rejected, (state, action) => {
+        console.log("deleteChat error");
       });
   },
 });

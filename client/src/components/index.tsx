@@ -10,3 +10,5 @@ export { default as SidebarInnerCallArea } from "./layout/inner";
 export { default as MasterCallLayout } from "./layout/masterCall";
 export { default as AlertDialog } from "./layout/alertDialog";
 export { default as CircularLoader } from "./layout/circularLoader";
+export { default as Modal } from "./layout/modal";
+export { default as SearchUser } from "./layout/searchUser";
